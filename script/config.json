@@ -1,0 +1,14 @@
+{
+    "dir": "asset/images",
+    "outputImage": "build/atlas.png",
+    "outputTS": "src/sprite.ts",
+    "atlasWidth": 2048,
+    "atlasHeight": 2048,
+    "separationW": 16,
+    "separationH": 16,
+    "transparent": {
+        "red": 0,
+        "green": 0,
+        "blue": 0
+    }
+}

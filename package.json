@@ -1,0 +1,35 @@
+{
+  "name": "pal",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "watch": {
+    "atlas": {
+      "ignore": "build",
+      "patterns": ["asset/images"],
+      "extensions": "png,gif",
+      "delay": 1000,
+      "runOnChangeOnly": true
+    }
+  },
+  "scripts": {
+    "build": "rollup -c -w",
+    "host": "http-server -p 80 -o -a localhost",
+    "atlas": "node script/atlas.js script/config.json",
+    "watch": "npm-watch"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^8.2.5",
+    "async": "^2.6.3",
+    "fs": "*",
+    "gifwrap": "^0.9.2",
+    "http-server": "^13.0.1",
+    "jimp": "^0.16.1",
+    "npm-watch": "^0.11.0",
+    "rollup": "^2.56.3",
+    "typescript": "^4.4.2"
+  }
+}
