@@ -7,7 +7,9 @@
   "watch": {
     "atlas": {
       "ignore": "build",
-      "patterns": ["asset/images"],
+      "patterns": [
+        "asset/images"
+      ],
       "extensions": "png,gif",
       "delay": 1000,
       "runOnChangeOnly": true
