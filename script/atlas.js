@@ -447,7 +447,7 @@ interface SpriteImage {
     /** A precomputed 3x3 matrix, used to slice this sprite image out of the texture atlas. */
     t: [number, number, number, number, number, number, number, number, number];
 }
-export default spr;`;
+export { Sprite, SpriteImage, spr};`;
     fs.writeFileSync(config.outputTS,code);
     console.log(`Output TypeScript to ${config.outputTS}`);
 }

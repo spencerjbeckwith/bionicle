@@ -107,9 +107,42 @@ Point is, every element has a certain moveset that is learned on level up.
 Enemies can have more than one element, and their moveset is independent of what their element is - they also have access to more elements and moves than the Toa do.
 
 to do next:
-- Make battle images for testing
-- Set up lists and interfaces for status effects, moves, and inventory items?
+- Types to implement:
+    - StatusEffect
+    - AppliedStatusEffect
+    - Animation w/ their framesets
+    - BattleControllerEvent
+        - "start" "beginTurn" "endTurn" "end"
+    - BattlerEvent
+        - "start" "status" "attack" "damaged" "mask" "element" "protect" "item" "beginTurn" "endTurn" "die" "end" ...?
+
+- Plan out battle flow - this is a necessary step. build a basic skeleton for BattleController
+    - Ex. who attacks when?
+    What data must be provided on different events? all battle data? You can pass the BattleController as an argument to any event handler, then...
+    Where are there event emitters?
+    Battle
+        onStart
+        onTurnBegin
+        onTurnEnd
+        onEnd
+        -- and more
+    Battler
+        onStart
+        onStatus
+        onAttack
+        onDamage
+        onTurn
+        onDie
+        -- and more
 - Set up battle flow function events
+    Ok so every BattleController and Battler instance is an EventTarget. Meaning, at some point after each Battle begins - likely as part of the battle's initailization: each battler's equipment must call their own init functions to add appropriate event listeners. Every equipment must also have a "de-init" for when an item is unequipped
+
+init and deinit are provided full access to the BattleController and every Battler present - so they can add events to virtually anything, anywhere.
+Weapons: init and deinit
+Equipment: init and deinit
+Accessories: init and deinit
+Inventory Items: use
+
     - Method to script events to be added when a battler equips something
         - Different events to add to: battle start, battle end, turn start, turn end, on damage, on deal damage, on use item, on use magic, on die, on heal... etc.
         - Use EventEmitter and add/remove listeners accordingly.

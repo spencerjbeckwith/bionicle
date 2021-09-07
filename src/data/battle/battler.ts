@@ -1,8 +1,12 @@
+import { Accessory } from '../inventory/accessories';
+import { Equipment } from '../inventory/equipment';
+import { InventoryItem } from '../inventory/items';
+import { Weapon } from '../inventory/weapons';
 import { BattlerTemplate } from './battlerTemplate';
 import StatCollection from './stats';
 
 /** Represents an instance of a BattlerTemplate, to be used in battle for ephemeral actions and effects that change over time. */
-class Battler {
+class Battler extends EventTarget {
     /** The template from which this Battler draws its default configuration and stats */
     template: BattlerTemplate;
 
@@ -26,21 +30,22 @@ class Battler {
 
     // These determine the options presented to a player or an AI each turn, along with the template's moves.
     /** What this Battler is wielding in their right hand */
-    rightHand: null; // TYPE ME
+    rightHand: Weapon | null;
     /** What this Battler is wielding in their left hand */
-    leftHand: null; // TYPE ME
+    leftHand: Weapon | null;
     /** What this Battler is wearing */
-    equipment: null; // TYPE ME
+    equipment: Equipment | null;
     /** What accessory this Battler has equipped */
-    accessory: null; // TYPE ME
+    accessory: Accessory | null;
     /** What items this Battler has access to */
-    inventory: null[]; // TYPE ME
+    inventory: (Weapon | Equipment | Accessory | InventoryItem | null)[];
 
     /** How much money this Battler is carrying - not applicable if not a Toa. */
     money: number;
 
     /** Creates a new Battler instance based off of a BattlerTemplate. */
     constructor(template: BattlerTemplate) {
+        super();
         this.template = template;
         this.stats = new StatCollection(template.stats);
         this.statusEffects = [];
@@ -59,6 +64,8 @@ class Battler {
     }
 
     // Add methods to save and load a battler - like a Toa - in-between sessions?
+
+    // Add methods when equipping or un-equipping weapons and stuff?
 
     // What other methods will go here? Different battle events?
 }

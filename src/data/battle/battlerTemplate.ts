@@ -1,6 +1,11 @@
 import { Element, elements } from '../elements';
+import { Accessory } from '../inventory/accessories';
+import { Equipment } from '../inventory/equipment';
+import { InventoryItem } from '../inventory/items';
+import { Weapon } from '../inventory/weapons';
 import { Mask, masks } from '../masks';
 import StatCollection from './stats';
+import { spr, Sprite } from '../../sprite';
 
 interface BattlerTemplateList {
     fikou: BattlerTemplate;
@@ -9,6 +14,8 @@ interface BattlerTemplateList {
 /** Represents the static data from which Battler instances are created. */
 interface BattlerTemplate {
     name: string;
+    description: string;
+    sprite: Sprite;
     palette: number | number[];
 
     dropXP: number;
@@ -19,23 +26,23 @@ interface BattlerTemplate {
     moves: null[];
     stats: StatCollection;
 
-    rightHand: null; // TYPE ME
-    leftHand: null; // TYPE ME
-    equipment: null; // TYPE ME
-    accessory: null; // TYPE ME
-    inventory: null[]; // TYPE ME
+    rightHand: Weapon | null;
+    leftHand: Weapon | null;
+    equipment: Equipment | null;
+    accessory: Accessory | null;
+    inventory: (Weapon | Equipment | Accessory | InventoryItem | null)[];
 
     // To add:
-    //  Description when examined
     //  AI decision flavors. E.g. mask use likelihood, attack likelihood, elemental likelihood, etc.
     //  Difficulty parameters for foe selection
-    //  Graphics/sprite information
     //  XP/item/equipment drop stats/chances
 }
 
 const battlerTemplates : BattlerTemplateList = {
     fikou: {
         name: 'Fikou Spider',
+        description: 'Known for their sturdy tree-top webs and powerful bites, Fikou Spiders can be quite dangerous despite their small size.',
+        sprite: spr.fikou,
         palette: 7,
         dropXP: 1,
         dropMoney: 1,
