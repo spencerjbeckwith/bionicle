@@ -1,8 +1,8 @@
-import BattleController from "../battle/battleController";
-import Battler from "../battle/battler";
+import Battler from "../../battle/battler";
 
 interface InventoryItemList {
     bambooDisk: InventoryItem;
+    // New items here
 }
 
 interface InventoryItem {
@@ -16,15 +16,16 @@ interface InventoryItem {
     destroyOnDrop: boolean;
     canSell: boolean;
 
-    use: (bc: BattleController, bearer: Battler, target: Battler | Battler[]) => void;
+    use: (bearer: Battler, target: Battler | Battler[]) => void;
 
     // To add:
     //  - sprite icon information
 }
 
+/** Represents any item that can be equipped - including weapons, equipment, and accessories */
 interface EquipItem extends InventoryItem {
-    init: (bc: BattleController, bearer: Battler) => void;
-    deinit: (bc: BattleController, bearer: Battler) => void;
+    init: (bearer: Battler) => void;
+    deinit: (bearer: Battler) => void;
 }
 
 const inventoryItems : InventoryItemList = {
@@ -37,10 +38,16 @@ const inventoryItems : InventoryItemList = {
         canDrop: true,
         destroyOnDrop: false,
         canSell: true,
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // nothing yet...
         }
     },
+
+    // New items here
 }
+
+Object.freeze(inventoryItems);
+Object.freeze(inventoryItems.bambooDisk);
+// Freeze new items here
 
 export { InventoryItem, EquipItem, inventoryItems };

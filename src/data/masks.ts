@@ -1,5 +1,5 @@
-import BattleController from "./battle/battleController"
-import Battler from "./battle/battler"
+import BattleController from "../battle/battleController"
+import Battler from "../battle/battler"
 
 interface MaskList {
     hau: Mask;
@@ -14,28 +14,30 @@ interface MaskList {
     matatu: Mask;
     mahiki: Mask;
     rau: Mask;
+
+    // New masks here
 }
 
 interface Mask {
     name: string;
     image: number;
 
-    init: (bc: BattleController, bearer: Battler) => void;
-    deinit: (bc: BattleController, bearer: Battler) => void;
-    use: (bc: BattleController, bearer: Battler, target: Battler | Battler[]) => void;
+    init: (bearer: Battler) => void;
+    deinit: ( bearer: Battler) => void;
+    use: (bearer: Battler, target: Battler | Battler[]) => void;
 }
 
 const masks : MaskList = {
     hau: {
         name: 'Hau',
         image: 0,
-        init: function(bc: BattleController, bearer: Battler) {
+        init: function(bearer: Battler) {
             // ...
         },
-        deinit: function(bc: BattleController, bearer: Battler) {
+        deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // ...
         },
     },
@@ -43,13 +45,13 @@ const masks : MaskList = {
     kakama: {
         name: 'Kakama',
         image: 1,
-        init: function(bc: BattleController, bearer: Battler) {
+        init: function(bearer: Battler) {
             // ...
         },
-        deinit: function(bc: BattleController, bearer: Battler) {
+        deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // ...
         },
     },
@@ -57,13 +59,13 @@ const masks : MaskList = {
     pakari: {
         name: 'Pakari',
         image: 2,
-        init: function(bc: BattleController, bearer: Battler) {
+        init: function(bearer: Battler) {
             // ...
         },
-        deinit: function(bc: BattleController, bearer: Battler) {
+        deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // ...
         },
     },
@@ -71,13 +73,13 @@ const masks : MaskList = {
     akaku: {
         name: 'Akaku',
         image: 3,
-        init: function(bc: BattleController, bearer: Battler) {
+        init: function(bearer: Battler) {
             // ...
         },
-        deinit: function(bc: BattleController, bearer: Battler) {
+        deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // ...
         },
     },
@@ -85,13 +87,13 @@ const masks : MaskList = {
     miru: {
         name: 'Miru',
         image: 4,
-        init: function(bc: BattleController, bearer: Battler) {
+        init: function(bearer: Battler) {
             // ...
         },
-        deinit: function(bc: BattleController, bearer: Battler) {
+        deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // ...
         },
     },
@@ -99,13 +101,13 @@ const masks : MaskList = {
     kaukau: {
         name: 'Kaukau',
         image: 5,
-        init: function(bc: BattleController, bearer: Battler) {
+        init: function(bearer: Battler) {
             // ...
         },
-        deinit: function(bc: BattleController, bearer: Battler) {
+        deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // ...
         },
     },
@@ -113,13 +115,13 @@ const masks : MaskList = {
     huna: {
         name: 'Huna',
         image: 6,
-        init: function(bc: BattleController, bearer: Battler) {
+        init: function(bearer: Battler) {
             // ...
         },
-        deinit: function(bc: BattleController, bearer: Battler) {
+        deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // ...
         },
     },
@@ -127,13 +129,13 @@ const masks : MaskList = {
     komau: {
         name: 'Komau',
         image: 7,
-        init: function(bc: BattleController, bearer: Battler) {
+        init: function(bearer: Battler) {
             // ...
         },
-        deinit: function(bc: BattleController, bearer: Battler) {
+        deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // ...
         },
     },
@@ -141,13 +143,13 @@ const masks : MaskList = {
     ruru: {
         name: 'Ruru',
         image: 8,
-        init: function(bc: BattleController, bearer: Battler) {
+        init: function(bearer: Battler) {
             // ...
         },
-        deinit: function(bc: BattleController, bearer: Battler) {
+        deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // ...
         },
     },
@@ -155,13 +157,13 @@ const masks : MaskList = {
     matatu: {
         name: 'Matatu',
         image: 9,
-        init: function(bc: BattleController, bearer: Battler) {
+        init: function(bearer: Battler) {
             // ...
         },
-        deinit: function(bc: BattleController, bearer: Battler) {
+        deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // ...
         },
     },
@@ -169,13 +171,13 @@ const masks : MaskList = {
     mahiki: {
         name: 'Mahiki',
         image: 10,
-        init: function(bc: BattleController, bearer: Battler) {
+        init: function(bearer: Battler) {
             // ...
         },
-        deinit: function(bc: BattleController, bearer: Battler) {
+        deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // ...
         },
     },
@@ -183,16 +185,37 @@ const masks : MaskList = {
     rau: {
         name: 'Rau',
         image: 11,
-        init: function(bc: BattleController, bearer: Battler) {
+        init: function(bearer: Battler) {
             // ...
         },
-        deinit: function(bc: BattleController, bearer: Battler) {
+        deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bc: BattleController, bearer: Battler, target: Battler | Battler[]) {
+        use: function(bearer: Battler, target: Battler | Battler[]) {
             // ...
         },
     },
+
+    // avohkii
+    // kraahkan
+    // etc...?
+
+    // New masks here
 }
+
+Object.freeze(masks);
+Object.freeze(masks.hau);
+Object.freeze(masks.kakama);
+Object.freeze(masks.pakari);
+Object.freeze(masks.akaku);
+Object.freeze(masks.miru);
+Object.freeze(masks.kaukau);
+Object.freeze(masks.huna);
+Object.freeze(masks.komau);
+Object.freeze(masks.ruru);
+Object.freeze(masks.matatu);
+Object.freeze(masks.mahiki);
+Object.freeze(masks.rau);
+// Freeze new masks here
 
 export { Mask, masks }

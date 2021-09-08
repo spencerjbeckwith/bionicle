@@ -5,6 +5,8 @@ interface ElementList {
     ice: Element;
     air: Element;
     water: Element;
+
+    // New elements here
 }
 
 interface Element {
@@ -64,6 +66,20 @@ const elements : ElementList = {
         moveset: [],
     },
 
+    // light
+    // dark
+    // etc...?
+
+    // New elements here
 }
+
+Object.freeze(elements);
+Object.freeze(elements.fire);
+Object.freeze(elements.stone);
+Object.freeze(elements.earth);
+Object.freeze(elements.ice);
+Object.freeze(elements.air);
+Object.freeze(elements.water);
+// Freeze new elements here
 
 export { Element, elements };

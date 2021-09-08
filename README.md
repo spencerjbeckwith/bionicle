@@ -1,8 +1,10 @@
+# BIONICLE
 
+## Development Environment
+
+- You must run `npm install` before using this package.
 - NPM script `build` will watch the source directory and compile/rollup your Typescript.
-
 - NPM script `host` will host a local webserver, serving your game files, and will open your browser to the page.
-
 - NPM script `watch` will watch the images asset folder and will recompile your atlas (via the `atlas` script) automatically when a change is detected. If you've also run `build` this change will then trigger that as well.
 
 Running all three of these together ensures a smooth development process. When saving an image or Typescript, the only thing you must do to run the game is refresh your browser page.
@@ -106,36 +108,83 @@ Etc. etc... more moves.
 Point is, every element has a certain moveset that is learned on level up.
 Enemies can have more than one element, and their moveset is independent of what their element is - they also have access to more elements and moves than the Toa do.
 
-to do next:
-- Types to implement:
-    - StatusEffect
-    - AppliedStatusEffect
-    - Animation w/ their framesets
-    - BattleControllerEvent
-        - "start" "beginTurn" "endTurn" "end"
-    - BattlerEvent
-        - "start" "status" "attack" "damaged" "mask" "element" "protect" "item" "beginTurn" "endTurn" "die" "end" ...?
+# Technical Info
 
+## Battlers
+
+Every fighter in a conflict is represented by a Battler instance. These are managed by a BattleController instance.
+
+Each Battler follows a BattlerTemplate - a predefined "skeleton" of sorts, determining things like base stats, sprite information, elements, palettes, masks, etc. These work very well for enemies, because they should be generated at the start of a battle, but a different approach is taken for players: Player Battler instances must be referenced outside of a BattleController, because their templates must not be referenced anywhere but as part of the Battler itself. This is because their templates must change and mutate, such as when a player levels up - while all enemy templates must remain static and may not change.
+
+Since player Battlers persist, you must be diligent to cure them of statuses, fix their stats when needed, and run the appropriate init/deinit methods when needed - because these instances are not forgotten.
+
+## init, deinit, and use methods
+
+Both Battlers and BattleControllers are event emitters. Different moves, equipment, masks, and status effects all do different and complex things - so each is provided with an init and a deinit function when they're defined (at game start). These functions should add event handlers for all the events they want to change to either Battler(s) or the BattleController.
+
+For example, a "poison" status effect would have an init function that would add a "turnBegin" event to the affected Battler (must provided when init is called for a status) and in that event, an animation or sound might play along with the HP being subtracted.
+
+Once that status is no longer active - like if the battle has ended, the status has expired or was cured, the battler has died, etc. then the deinit is called, which in this case, must remove the poison handler from the "turnBegin" event on that battler.
+
+This sytem allows for flexible, complex, and unique effects for every mask, status, or piece of equipment. However, it is critical that these methods are called when necessary or you may end up with leftover events that don't make sense and can't be removed! Imagine you think you're cured of poison - but just turns out you've got poison forever because deinit wasn't called right.
+
+This system of init/deinit is also reflected in the file structure: the "battle" folder has the actual code for things like Battlers and the BattleController, which call the init/deinit methods and dispatch events. The top-level files in the "data" folder export lists of things such as masks, statuses, etc. which pull in those init and deinit methods from the deeper level folders - so that each unique effect can have its own file and can be worked on without any one file becoming too chonky or unwieldly.
+
+Some things have a "use" method, in addition to or in place of init/deinit. These indicate items or masks that can be used in a battle. Use is pretty simple - it is called when a Battler uses it and must be provided a user and target(s). For example, when you have a mask it provides a passive or conditional effect - applied via init/deinit - and when it is activated in battle, the use method is called.
+
+## Actions
+
+Everything done by a Battler is represented by an Action instance. Actions have multiple types - including "attack", "special", etc. Actions must be executed when a Battler takes their turn. Action execution returns a promise, which resolves once the action is done and after it does things such as run an animation, play a sound, etc. Action instances can represent everything that can possibly be done, by anyone, at any time.
+
+By using promises, we can simplify the overall structuring of the BattleController and Battler classes. **Actions are not the same thing as Moves. Don't mix them up.**
+
+## Timelines
+
+Timelines are a frame-by-frame animation that can be played at any time. When a timeline is played, its main method must be called every frame after that until the timeline completes. Any number of timelines can be playing at once, as long as their main methods are called - though typically you wouldn't want more than one at once. The same timeline cannot play more than once at a time.
+
+Timelines are intended for battle animations or different screen effects.
+
+## Special Moves
+
+(not implemented yet. Do next)
+
+Battlers have access to different "movesets" defined by their template. Player Battlers learn moves as they level up, according to their element. Non-player Battlers can have access to any move, regardless of their element, as set in their template. Special Moves are not the same as Actions - Actions are just able to represent a Battler using a special move, in addition to all the other possibilities available to a Battler.
+
+Special Moves have a "use" method, like items or masks, which returns a promise that resolves once all the moves effects are over and complete.
+
+# Netplay
+
+Write specifics about how the network is going to work. Some preliminary thoughts:
+- Battlers must have AI that evaluates situations equally, regardless of if its a friendly or a foe. In fact, it may as well not know. However, in an online session, AI must be evaluated on the server-side so that every client has the same results...
+- Actions will be the primary means of communicating during a battle. Each turn - every battlers action is sent to every client, then they watch the animations and see effects, and then the next turn begins. **No data will be stored on connected clients besides static game data, such as moves, timelines, or items. Nor will any calculations of any kind take place on a connected client.**
+    - Actions must be "verified" on the server-side before they can be accepted by the server, to make sure players don't take actions that their Battler could not do. For example, using a move they don't know or an item they don't have.
+        - Will some actions need to have a "result" sent along with them? Or maybe a "FulfilledAction" class? This is because if calculations could occur on client machines, damage inflicted *could* be different if there's any element of randomness. Instead, the server must run all calculations - meaning the clients must be told the results of each action.
+            - So all the clients do, really, is play animations and sound and accept player input. They send Actions to the server, and are given Actions back to animate/execute.
+    - Every turn, the entire state of the battle will need to be updated. Because this'll only happen once every couple seconds at most, even if it is a lot of data it probably won't be too slow. All Battlers must be kept current every turn or the game may de-sync.
+        - BattleController will not be responsible for networking and keeping a session in-sync, but applying data obtained from a server such as states and Actions.
+- You'll need turn-timers? And of course, all the player connection/disconnection required for any online game. Also a chat and other administrative features.
+
+Will you re-use client code in the server instance? You'll probably have to... For example, different templates, moves, etc. must be tracked by the server and not provided by clients when they connect, or the game would be a mess. **At what point will the client and server codebases diverge?**
+
+Oh man, this gonna be tricky.
+
+You'll have to import client code and find a way to run it in the context of a server. You will also need to make it so battles can be run completely just by text - in the context of a command line.
+
+# To-do
+
+- Moves/Special - set up classes, write necessary documentation bits, and standardize the language - say "special moves" rather than "elemental" moves.
 - Plan out battle flow - this is a necessary step. build a basic skeleton for BattleController
     - Ex. who attacks when?
-    What data must be provided on different events? all battle data? You can pass the BattleController as an argument to any event handler, then...
-    Where are there event emitters?
-    Battle
-        onStart
-        onTurnBegin
-        onTurnEnd
-        onEnd
-        -- and more
-    Battler
-        onStart
-        onStatus
-        onAttack
-        onDamage
-        onTurn
-        onDie
-        -- and more
-- Set up battle flow function events
-    Ok so every BattleController and Battler instance is an EventTarget. Meaning, at some point after each Battle begins - likely as part of the battle's initailization: each battler's equipment must call their own init functions to add appropriate event listeners. Every equipment must also have a "de-init" for when an item is unequipped
+    - What data is provided to BattleControllerEvent and BattlerEvent?
+- Begin restructuring source for a server component as well
+    - Idea file structure:
+        - ```src/client``` Modules used only by the client, such as GL setup, sprites, sounds, effects, and connecting to servers.
+        - ```src/server``` Modules used only by the server, such as commandline, configuration, and receiving connections.
+        - ```src/common``` Modules used by both client and server, such as game information, BattleControllers, Battlers, data with init/deinit/use, etc.
+    - All classes that run important game information (like BattleController and Battler) should have a "puppet" flag, which will only let them get data over the network when active. So they can be used both in offline singleplayer, or online, with minimal difference. Most code will probably go in here, as it should be almost entirely dual-purposed for a commandline or a browser environment.
+- Make battle simulation (a battle with no clients, run in node only)
+    - All classes that return promises (like Timelines and Actions) should resolve immediately
+- Set up testing suite and run test battles
 
 init and deinit are provided full access to the BattleController and every Battler present - so they can add events to virtually anything, anywhere.
 Weapons: init and deinit
@@ -143,10 +192,4 @@ Equipment: init and deinit
 Accessories: init and deinit
 Inventory Items: use
 
-    - Method to script events to be added when a battler equips something
-        - Different events to add to: battle start, battle end, turn start, turn end, on damage, on deal damage, on use item, on use magic, on die, on heal... etc.
-        - Use EventEmitter and add/remove listeners accordingly.
-        - How can you include these sorts of things in templates?
-            - Enemies with special effects should have those effects as equipment or accessories (just that can't be obtained by a player)
-            Hm.... this'll be interesting. The same system should apply to elemental attacks, weapon attacks, and other moves, yeah?
 - Design battle HUD?

@@ -1,9 +1,13 @@
-import { Accessory } from '../inventory/accessories';
-import { Equipment } from '../inventory/equipment';
-import { InventoryItem } from '../inventory/items';
-import { Weapon } from '../inventory/weapons';
-import { BattlerTemplate } from './battlerTemplate';
-import StatCollection from './stats';
+import BattleController from './battleController';
+import StatCollection from '../data/stats';
+import { BattlerTemplate } from '../data/battlerTemplate';
+import { BattlerEvent, BattlerEventTypes } from '../data/events';
+import { Action } from './actions';
+import { Weapon } from '../data/inventory/weapons';
+import { Equipment } from '../data/inventory/equipment';
+import { InventoryItem } from '../data/inventory/items';
+import { Accessory } from '../data/inventory/accessories';
+import { AppliedStatusEffect } from '../data/statuses';
 
 /** Represents an instance of a BattlerTemplate, to be used in battle for ephemeral actions and effects that change over time. */
 class Battler extends EventTarget {
@@ -14,13 +18,16 @@ class Battler extends EventTarget {
     stats: StatCollection;
 
     /** Current applicable effects on this Battler */
-    statusEffects: null[]; // TYPE ME
+    statusEffects: AppliedStatusEffect[];
 
     /** will be used for netcode - not implemeneted yet */
     myPlayer: null;
 
     /** Indicates if this Battler is the current player for this instance of the game */
     isMe: boolean;
+
+    /** Reference to the battler's current battle. */
+    bc: BattleController | null;
 
     /** Indiciates if this battler is on the current player's side in a battle */
     isFriendly: boolean;
@@ -43,8 +50,10 @@ class Battler extends EventTarget {
     /** How much money this Battler is carrying - not applicable if not a Toa. */
     money: number;
 
+    action: Action | null;
+
     /** Creates a new Battler instance based off of a BattlerTemplate. */
-    constructor(template: BattlerTemplate) {
+    constructor(template: BattlerTemplate, bc?: BattleController) {
         super();
         this.template = template;
         this.stats = new StatCollection(template.stats);
@@ -61,21 +70,41 @@ class Battler extends EventTarget {
         this.accessory = template.accessory;
         this.inventory = template.inventory;
         this.money = 0;
+        this.bc = bc || null;
+
+        this.action = null;
     }
 
-    // Add methods to save and load a battler - like a Toa - in-between sessions?
+    addEventListener(type: BattlerEventTypes, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
+        super.addEventListener(type, listener, options);
+    }
+
+    beginTurn() {
+        this.dispatchEvent(new BattlerEvent('beforeTurn',{
+            battler: this,
+        }));
+
+        // ...?
+    }
+
+    endTurn() {
+        this.dispatchEvent(new BattlerEvent('afterTurn',{
+            battler: this,
+        }));
+
+        // ...?
+    }
+
+    // Add methods to save and load a battler - like a Toa - in-between sessions? Via JSON?
 
     // Add methods when equipping or un-equipping weapons and stuff?
 
     // What other methods will go here? Different battle events?
+    // Method: getAllActions
+
+    // You'll want some AI methods:
+    //  Determine what actions could be taken -> getAllActions
+    //  Evaluate, using template AI weights, which actions have the most favorable effects via minimax... hm...
 }
-
-// Player Toa will be Battler instances that persist between battles - just be sure to wipe the statusEffects when appropriate.
-// Toa are based on unique templates each, which are NOT part of the general battlerTemplates list. They can and should be mutated when appropriate.
-// For example, to teach a Toa a new move or change their name, you'd have to modify the template
-
-// A Battler instance's stats indicate their effective stats, including whatever modifiers you'll add.
-// A BattlerTemplate instance's stats indicate that Battler's default stats - the values to set their effective stats to when modifiers are over, for example
-// A Toa's template's stats must increase when they level up.
 
 export default Battler;

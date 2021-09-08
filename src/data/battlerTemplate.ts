@@ -1,14 +1,16 @@
-import { Element, elements } from '../elements';
-import { Accessory } from '../inventory/accessories';
-import { Equipment } from '../inventory/equipment';
-import { InventoryItem } from '../inventory/items';
-import { Weapon } from '../inventory/weapons';
-import { Mask, masks } from '../masks';
+import { Element, elements } from './elements';
+import { Accessory } from './inventory/accessories';
+import { Equipment } from './inventory/equipment';
+import { InventoryItem } from './inventory/items';
+import { Weapon } from './inventory/weapons';
+import { Mask, masks } from './masks';
 import StatCollection from './stats';
-import { spr, Sprite } from '../../sprite';
+import { spr, Sprite } from '../sprite';
 
 interface BattlerTemplateList {
     fikou: BattlerTemplate;
+
+    // More templates here
 }
 
 /** Represents the static data from which Battler instances are created. */
@@ -70,7 +72,14 @@ const battlerTemplates : BattlerTemplateList = {
         equipment: null,
         accessory: null,
         inventory: [],
-    }
+    },
+
+    // More templates here
 }
+
+Object.freeze(battlerTemplates);
+Object.freeze(battlerTemplates.fikou);
+
+// Freeze new templates here
 
 export { BattlerTemplate, battlerTemplates };
