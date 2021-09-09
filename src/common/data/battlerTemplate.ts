@@ -6,6 +6,7 @@ import { Weapon } from './inventory/weapons';
 import { Mask, masks } from './masks';
 import StatCollection from './stats';
 import { spr, Sprite } from '../sprite';
+import { SpecialMove } from './moves';
 
 interface BattlerTemplateList {
     fikou: BattlerTemplate;
@@ -25,11 +26,10 @@ interface BattlerTemplate {
 
     elements: Element[];
     masks: Mask[];
-    moves: null[];
+    moves: SpecialMove[];
     stats: StatCollection;
 
-    rightHand: Weapon | null;
-    leftHand: Weapon | null;
+    weapon: Weapon | null;
     equipment: Equipment | null;
     accessory: Accessory | null;
     inventory: (Weapon | Equipment | Accessory | InventoryItem | null)[];
@@ -67,8 +67,7 @@ const battlerTemplates : BattlerTemplateList = {
             level: 1,
             xp: 0,
         },
-        rightHand: null,
-        leftHand: null,
+        weapon: null,
         equipment: null,
         accessory: null,
         inventory: [],

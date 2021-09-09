@@ -1,5 +1,4 @@
-import BattleController from "../battle/battleController"
-import Battler from "../battle/battler"
+import Battler from '../battle/battler';
 
 interface MaskList {
     hau: Mask;
@@ -24,7 +23,7 @@ interface Mask {
 
     init: (bearer: Battler) => void;
     deinit: ( bearer: Battler) => void;
-    use: (bearer: Battler, target: Battler | Battler[]) => void;
+    use: (bearer: Battler, target: Battler | Battler[] | null) => Promise<void>;
 }
 
 const masks : MaskList = {
@@ -37,8 +36,13 @@ const masks : MaskList = {
         deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bearer: Battler, target: Battler | Battler[]) {
-            // ...
+        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+            return new Promise((resolve, reject) => {
+
+                // ...
+
+                resolve();
+            });
         },
     },
 
@@ -51,8 +55,13 @@ const masks : MaskList = {
         deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bearer: Battler, target: Battler | Battler[]) {
-            // ...
+        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+            return new Promise((resolve, reject) => {
+
+                // ...
+
+                resolve();
+            });
         },
     },
 
@@ -65,8 +74,13 @@ const masks : MaskList = {
         deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bearer: Battler, target: Battler | Battler[]) {
-            // ...
+        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+            return new Promise((resolve, reject) => {
+
+                // ...
+
+                resolve();
+            });
         },
     },
 
@@ -79,8 +93,13 @@ const masks : MaskList = {
         deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bearer: Battler, target: Battler | Battler[]) {
-            // ...
+        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+            return new Promise((resolve, reject) => {
+
+                // ...
+
+                resolve();
+            });
         },
     },
 
@@ -93,8 +112,13 @@ const masks : MaskList = {
         deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bearer: Battler, target: Battler | Battler[]) {
-            // ...
+        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+            return new Promise((resolve, reject) => {
+
+                // ...
+
+                resolve();
+            });
         },
     },
 
@@ -107,8 +131,13 @@ const masks : MaskList = {
         deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bearer: Battler, target: Battler | Battler[]) {
-            // ...
+        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+            return new Promise((resolve, reject) => {
+
+                // ...
+
+                resolve();
+            });
         },
     },
 
@@ -121,8 +150,13 @@ const masks : MaskList = {
         deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bearer: Battler, target: Battler | Battler[]) {
-            // ...
+        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+            return new Promise((resolve, reject) => {
+
+                // ...
+
+                resolve();
+            });
         },
     },
 
@@ -135,8 +169,13 @@ const masks : MaskList = {
         deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bearer: Battler, target: Battler | Battler[]) {
-            // ...
+        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+            return new Promise((resolve, reject) => {
+
+                // ...
+
+                resolve();
+            });
         },
     },
 
@@ -149,8 +188,13 @@ const masks : MaskList = {
         deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bearer: Battler, target: Battler | Battler[]) {
-            // ...
+        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+            return new Promise((resolve, reject) => {
+
+                // ...
+
+                resolve();
+            });
         },
     },
 
@@ -163,8 +207,13 @@ const masks : MaskList = {
         deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bearer: Battler, target: Battler | Battler[]) {
-            // ...
+        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+            return new Promise((resolve, reject) => {
+
+                // ...
+
+                resolve();
+            });
         },
     },
 
@@ -177,8 +226,13 @@ const masks : MaskList = {
         deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bearer: Battler, target: Battler | Battler[]) {
-            // ...
+        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+            return new Promise((resolve, reject) => {
+
+                // ...
+
+                resolve();
+            });
         },
     },
 
@@ -191,8 +245,13 @@ const masks : MaskList = {
         deinit: function(bearer: Battler) {
             // ...
         },
-        use: function(bearer: Battler, target: Battler | Battler[]) {
-            // ...
+        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+            return new Promise((resolve, reject) => {
+
+                // ...
+
+                resolve();
+            });
         },
     },
 

@@ -1,3 +1,5 @@
+import { LevelUpMove, specialMoves } from './moves';
+
 interface ElementList {
     fire: Element;
     stone: Element;
@@ -14,7 +16,7 @@ interface Element {
     name: string;
     palettes: number[];
     multipliers: [ number, number, number, number, number, number];
-    moveset: null[]; // TYPE ME
+    moveset: LevelUpMove[];
 }
 
 const elements : ElementList = {
@@ -23,7 +25,10 @@ const elements : ElementList = {
         name: 'Fire',
         palettes: [ 1, 7, 13 ],
         multipliers: [ 1, 1, 1, 1, 1, 1 ],
-        moveset: [],
+        moveset: [{
+            move: specialMoves.flare,
+            level: 1
+        },],
     },
 
     stone: {

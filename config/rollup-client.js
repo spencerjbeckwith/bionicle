@@ -1,12 +1,12 @@
 import typescript from '@rollup/plugin-typescript';
 export default {
-    input: 'src/main.ts',
+    input: 'src/client/main.ts',
     output: {
-        file: 'build/main.js',
+        file: 'build/client.js',
     },
     plugins: [
         typescript({
-            tsconfig: 'tsconfig.json',
+            tsconfig: './config/tsconfig-client.json',
         }),
     ],
 }

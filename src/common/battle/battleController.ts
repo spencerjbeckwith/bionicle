@@ -8,15 +8,32 @@ class BattleController extends EventTarget {
     foes: Battler[];
     turn: number;
 
+    // Netcode
+    puppet: boolean;
+    server: boolean;
+
     currentTimeline: Timeline | null;
 
-    constructor() { // Include initial battlers in the constructor?
+    constructor(allies: Battler[], foes: Battler[]) {
         super();
-        this.allies = [];
-        this.foes = [];
 
+        // Set up our battler lists
+        this.allies = allies;
+        this.foes = foes;
+        for (let i = 0; i < this.allies.length; i++) {
+            this.allies[i].bc = this;
+        }
+        for (let i = 0; i < this.foes.length; i++) {
+            this.foes[i].bc = this;
+        }
+
+        // Initial state
         this.turn = 0;
         this.currentTimeline = null;
+
+        // Initial netcode
+        this.puppet = false;
+        this.server = false;
     }
 
     /** Must be called every frame of a battle. */

@@ -1,7 +1,7 @@
-import Matrix from './matrix';
+import Matrix from '../common/matrix';
 import { TextureInfo, GameTextureInfo, gl, canvas, projection, loadTexture, createGameTexture, enableCanvasResize } from './gl';
 import shader from './shader';
-import { Sprite, SpriteImage, spr }  from './sprite';
+import { Sprite, SpriteImage, spr }  from '../common/sprite';
 
 let pal = 1;
 function main() {
@@ -92,7 +92,7 @@ enableCanvasResize(viewWidth,viewHeight);
 Promise.all([
     createGameTexture(viewWidth,viewHeight),
     loadTexture('build/atlas.png'),
-    loadTexture('palette.png'),
+    loadTexture('asset/palette.png'),
     // Load more resources here...
 ]).then(([game, atlas, palette]) => {
     gameTextureInfo = game;
