@@ -1,4 +1,5 @@
 import Battler from '../battle/battler';
+import deepfreeze from 'deepfreeze';
 
 interface MaskList {
     hau: Mask;
@@ -262,19 +263,5 @@ const masks : MaskList = {
     // New masks here
 }
 
-Object.freeze(masks);
-Object.freeze(masks.hau);
-Object.freeze(masks.kakama);
-Object.freeze(masks.pakari);
-Object.freeze(masks.akaku);
-Object.freeze(masks.miru);
-Object.freeze(masks.kaukau);
-Object.freeze(masks.huna);
-Object.freeze(masks.komau);
-Object.freeze(masks.ruru);
-Object.freeze(masks.matatu);
-Object.freeze(masks.mahiki);
-Object.freeze(masks.rau);
-// Freeze new masks here
-
+deepfreeze(masks);
 export { Mask, masks }

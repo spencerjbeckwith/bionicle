@@ -1,9 +1,10 @@
 import { Timeline } from './timelines';
 import Battler from './battler';
 import { BattleControllerEventTypes } from '../data/events';
+import { PromisedEventTarget } from '../promisedEventTarget';
 
 /** Manages all aspects of a battle and the Battlers partaking in it. */
-class BattleController extends EventTarget {
+class BattleController extends PromisedEventTarget {
     allies: Battler[];
     foes: Battler[];
     turn: number;
@@ -53,8 +54,8 @@ class BattleController extends EventTarget {
         });
     }
 
-    addEventListener(type: BattleControllerEventTypes, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
-        super.addEventListener(type, listener, options);
+    addPromisedEventListener<ev>(type: BattleControllerEventTypes, listener: (event: ev) => Promise<ev>, priority?: number, once?: boolean) {
+        super.addPromisedEventListener(type, listener, priority, once);
     }
 }
 

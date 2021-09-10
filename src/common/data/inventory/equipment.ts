@@ -1,4 +1,5 @@
 import { EquipItem } from './items';
+import deepfreeze from 'deepfreeze';
 
 interface EquipmentList {
     // New equipment here
@@ -12,7 +13,5 @@ const equipment : EquipmentList = {
     // New equipment here
 }
 
-Object.freeze(equipment);
-// Freeze new equipment here
-
+deepfreeze(equipment);
 export { Equipment, equipment };

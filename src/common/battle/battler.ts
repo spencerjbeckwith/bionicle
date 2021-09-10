@@ -1,19 +1,17 @@
 import BattleController from './battleController';
 import StatCollection from '../data/stats';
 import { BattlerTemplate } from '../data/battlerTemplate';
-import { BattlerEvent, BattlerEventTypes } from '../data/events';
+import { BattlerBeginTurnEvent, BattlerEndTurnEvent, BattlerDamageEvent, BattlerKnockOutEvent, BattlerEvent, BattlerEventTypes, BattlerHealEvent, BattlerStatusAppliedEvent, BattlerStatusRemovedEvent } from '../data/events';
 import { Action } from './actions';
 import { Weapon } from '../data/inventory/weapons';
 import { Equipment } from '../data/inventory/equipment';
 import { UsableItem, InventoryItem } from '../data/inventory/items';
 import { Accessory } from '../data/inventory/accessories';
 import { AppliedStatusEffect, StatusEffect } from '../data/statuses';
+import { PromisedEventTarget } from '../promisedEventTarget';
 
 /** Represents an instance of a BattlerTemplate, to be used in battle for ephemeral actions and effects that change over time. */
-class Battler extends EventTarget {
-    /** The template from which this Battler draws its default configuration and stats */
-    template: BattlerTemplate;
-
+class Battler extends PromisedEventTarget {
     /** The effective stats of this Battler */
     stats: StatCollection;
 
@@ -53,11 +51,11 @@ class Battler extends EventTarget {
     money: number;
 
     action: Action | null;
+    isKOed: boolean;
 
     /** Creates a new Battler instance based off of a BattlerTemplate. */
-    constructor(template: BattlerTemplate, bc?: BattleController) {
+    constructor(public template: BattlerTemplate, bc?: BattleController) {
         super();
-        this.template = template;
         this.stats = new StatCollection(template.stats);
         this.statusEffects = [];
         
@@ -65,6 +63,7 @@ class Battler extends EventTarget {
         this.isMe = false;
         this.isFriendly = false;
         this.isToa = false;
+        this.isKOed = false;
         this.puppet = false;
         this.server = false;
 
@@ -86,27 +85,52 @@ class Battler extends EventTarget {
         this.action = null;
     }
 
-    addEventListener(type: BattlerEventTypes, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
-        super.addEventListener(type, listener, options);
+    addPromisedEventListener<ev>(type: BattlerEventTypes, listener: (event: ev) => Promise<ev>, priority?: number, once?: boolean) {
+        super.addPromisedEventListener(type, listener, priority, once);
     }
 
-    beginTurn() {
-        this.dispatchEvent(new BattlerEvent('beforeTurn',{
-            battler: this,
-        }));
-
-        // ...?
+    beginTurn(): Promise<BattlerBeginTurnEvent> {
+        return super.dispatchPromisedEvent(new BattlerBeginTurnEvent(this));
     }
 
-    endTurn() {
-        this.dispatchEvent(new BattlerEvent('afterTurn',{
-            battler: this,
-        }));
+    endTurn(): Promise<BattlerEndTurnEvent> {
+        return new Promise((resolve, reject) => {
+            // This looks nasty at first but lemme explain
+            // To return the correct event, we must asynchronously dispatch the removeStatus event when statuses get removed
+            // If there are none, it makes no difference. Otherwise, the event's listeners will fire before the battler's turn ends and this function's returned promise resolves.
 
-        // For every status effect, tick down turns remaining by 1
-        // If the turns left is 0, remove the status via removeStatus
+            // Get all the statuses that have to be removed
+            let toRemove: StatusEffect[] = [];
+            for (let i = 0; i < this.statusEffects.length; i++) {
+                const appliedStatus = this.statusEffects[i];
+                appliedStatus.turnsRemaining--;
+                if (appliedStatus.turnsRemaining <= 0) {
+                    // Out of turns, remove the status
+                    toRemove.push(appliedStatus.status);
+                }
+            }
 
-        // ...?
+            if (toRemove.length > 0) {
+                // Remove the statuses
+                let promise = this.removeStatus(toRemove[0],true);
+                for (let i = 1; i < toRemove.length; i++) {
+                    // Chain together status removal events into one promise
+                    promise = promise.then(() => {
+                        return this.removeStatus(toRemove[i],true);
+                    });
+                }
+
+                // Resolve our main promise only after the statuses are removed
+                promise.then(() => {
+                    resolve(super.dispatchPromisedEvent(new BattlerEndTurnEvent(this)));
+                }).catch((err) => {
+                    reject(err);
+                });
+            } else {
+                // No status to remove: resolve with our new promise
+                resolve(super.dispatchPromisedEvent(new BattlerEndTurnEvent(this)));
+            } 
+        });
     }
 
     /** Equips a weapon to this Battler. Returns the previous Weapon, or null if none was equipped. */
@@ -169,48 +193,178 @@ class Battler extends EventTarget {
         return value;
     }
 
-    damage() {
+    /** Applies a new status to this Battler. If the status is already present, the turns are added together up the status's max possible turns. Returns a promise which will only reject if there's an error on the BattlerStatusAppliedEvent. */
+    applyStatus(status: StatusEffect, turns: number): Promise<BattlerStatusAppliedEvent | null> {
+        return new Promise((resolve, reject) => {
+            if (this.template.immunities.includes(status)) {
+                // We're immune, ha ha
+                resolve(null);
+            } else {
+                const index = this.getStatusIndex(status);
+                if (index === null) {
+                    this.dispatchPromisedEvent(new BattlerStatusAppliedEvent(this,status,turns)).then((event) => {
+                        // Add status and call init on us
+                        this.statusEffects.push(new AppliedStatusEffect(event.status, Math.min(event.turns, status.maxTurns)));
+                        event.status.init(this);
 
+                        // effect?
+                        resolve(event);
+                    }).catch((err) => {
+                        reject(err);
+                    });
+                } else {
+                    // We already have init'ed this status, so just add more turns
+                    this.statusEffects[index].turnsRemaining = Math.min(this.statusEffects[index].turnsRemaining + turns, status.maxTurns);
+
+                    // effect?
+                    resolve(null);
+                }
+            }
+        });
     }
 
-    heal() {
+    /** Removes a specific curable status from this Battler. If force is true, it will be removed even if it is not curable. Returns a promise which will only reject if there's an error on the BattlerStatusRemovedEvent. */
+    removeStatus(status: StatusEffect, force = false): Promise<BattlerStatusRemovedEvent | null> {
+        return new Promise((resolve, reject) => {
+            const index = this.getStatusIndex(status);
+            if (index !== null) {
+                if (status.curable || force) {
+                    return this.dispatchPromisedEvent(new BattlerStatusRemovedEvent(this,status,force)).then((event) => {
+                        // We have the status, splice its index out and call deinit
+                        this.statusEffects.splice(index,1);
+                        status.deinit(this);
 
+                        // effect?
+                        resolve(event);
+                    }).catch((err) => {
+                        reject(err);
+                    });
+                }
+            }
+            
+            // If we don't have the status, nothing happens
+            resolve(null);
+        });
     }
 
-    applyStatus(status: StatusEffect, turns: number) {
-        // Make sure we don't already have the status
-        // If so, just give it more turns
-        // If not, push a new applied status effect instance to our statuseffects array
-        //  Be sure to call the status init()!
+    /** Removes all curable statuses from this Battler. If force is true, all statuses will be removed, including ones that aren't curable. THIS DOES NOT CAUSE THE BattlerStatusRemovedEvent to fire!*/
+    removeAllStatuses(force = false) {
+        this.statusEffects = this.statusEffects.filter(appliedStatus => {
+            const status = appliedStatus.status;
+            if (status.curable || force) {
+                // Status removable, call deinit and return false so its removed by filter
+                status.deinit(this);
+                
+                // dispatch status removed event?
+
+                return false;
+            }
+            return true; // Could not remove this status, so keep in our array
+        },this);
     }
 
-    removeStatus(status: StatusEffect) {
-        // Make sure we have the status applied
-        // Splice it out of our statuseffecst array
-        //  Be sure to call the status deinit()!
+    /** Returns the index of a status effect applied to this Battler. If this status isn't present, returns null. */
+    getStatusIndex(status: StatusEffect): number | null {
+        for (let i = 0; i < this.statusEffects.length; i++) {
+            const appliedStatus = this.statusEffects[i];
+            if (appliedStatus.status === status) {
+                return i;
+            }
+        }
+
+        return null;
     }
 
-    removeAllStatuses() {
-        // cycle all current statuses
-        // call deinit
-        // set status array to be empty
-    }
+    /** Damages this Battler's HP or nova by a certain amount. */
+    damage(amount: number, stat: 'hp' | 'nova' = 'hp', source: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack'): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this.dispatchPromisedEvent<BattlerDamageEvent>(new BattlerDamageEvent(this,amount,stat,source)).then((event) => {
+                event.amount = Math.round(event.amount);
+                if (stat === 'hp') {
+                    this.stats.hp -= event.amount;
+                    if (this.stats.hp <= 0) {
+                        // This damage killed us
+                        this.stats.hp = 0;
 
-    getStatusIndex(status: StatusEffect): number {
-        // Returns -1 if no status found, otherwise returns its index in this.statusEffects array
-
-        // cycle through until you find a status with a match, then break and return that index
-
-        return -1;
-    }
-
-    die() {
+                        // effect promise chain here?
+                        this.knockOut(source).then(() => {
+                            resolve();
+                        });
+                    } else {
+                        // We survived the damage
         
+                        // effect promise chain here?
+                        resolve();
+                    }
+                } else {
+                    this.stats.nova -= event.amount;
+                    if (this.stats.nova < 0) {
+                        this.stats.nova = 0;
+                    }
+
+                    // effect promise chain here?
+
+                    resolve();
+                }
+            }).catch((err) => {
+                reject(err);
+            });
+        });
+    }
+
+    /** Restores this Battler's HP or nova by a certain amount. */
+    heal(amount: number, stat: 'hp' | 'nova' = 'hp', source: 'special' | 'item' | 'status' | 'mask' = 'item'): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            this.dispatchPromisedEvent(new BattlerHealEvent(this,amount,stat,source)).then((event) => {
+                event.amount = Math.round(event.amount);
+                if (stat === 'hp') {
+                    this.stats.hp += event.amount;
+                    if (this.stats.hp > this.stats.maxHP) {
+                        this.stats.hp = this.stats.maxHP;
+                    }
+
+                    // effect promise chain here?
+                    resolve();
+                } else {
+                    this.stats.nova += event.amount;
+                    if (this.stats.nova > this.stats.maxNova) {
+                        this.stats.nova = this.stats.maxNova;
+                    }
+
+                    // effect promise chain here?
+                    resolve();
+                }
+            }).catch((err) => {
+                reject(err);
+            });
+        });
+    }
+
+    /** KOs the Battler. */
+    knockOut(cause: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack'): Promise<void> {
+        return new Promise((resolve,reject) => {
+            this.dispatchPromisedEvent(new BattlerKnockOutEvent(this,cause)).then((event) => {
+                this.isKOed = true;
+                if (this.isToa) {
+                    // Don't die for real - just KO
+
+                    // effect promise chain here?
+                    resolve();
+                } else {
+                    // Die for real
+
+                    // call to BattleController to remove us from the battle?
+
+                    // effect promise chain here?
+                    resolve();
+                }
+            }).catch((err) => {
+                reject(err);
+            });
+        });
     }
 
     // Add methods to save and load a battler - like a Toa - in-between sessions? Via JSON?
-
-    // Add methods when equipping or un-equipping weapons and stuff?
 
     // What other methods will go here? Different battle events?
     // Method: getAllActions

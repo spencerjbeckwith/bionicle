@@ -1,4 +1,5 @@
 import { LevelUpMove, specialMoves } from './moves';
+import deepfreeze from 'deepfreeze';
 
 interface ElementList {
     fire: Element;
@@ -78,13 +79,5 @@ const elements : ElementList = {
     // New elements here
 }
 
-Object.freeze(elements);
-Object.freeze(elements.fire);
-Object.freeze(elements.stone);
-Object.freeze(elements.earth);
-Object.freeze(elements.ice);
-Object.freeze(elements.air);
-Object.freeze(elements.water);
-// Freeze new elements here
-
+deepfreeze(elements);
 export { Element, elements };

@@ -7,8 +7,9 @@
 - NPM script `buildServer` will watch the source directory and server files to compile/rollup your Typescript for the server instance.
 - NPM script `host` will host a local webserver, serving your game files, and will open your browser to the page.
 - NPM script `watch` will watch the images asset folder and will recompile your atlas (via the `atlas` script) automatically when a change is detected. If you've also run `build` this change will then trigger that as well.
+- NPM script `test` runs (and watches) the test files located alongside source files.
 
-Running these scripts together ensures a smooth development process. When saving an image or Typescript, the only thing you must do to run the game is refresh your browser page.
+Running these scripts together ensures a smooth development process. When saving an image or Typescript, the only thing you must do to run the game is refresh your browser page. I recommend setting up a vscode task that will run all these scripts at once and open them all parallel to each other in the same terminal.
 
 ==========
 
@@ -121,7 +122,7 @@ Since player Battlers persist, you must be diligent to cure them of statuses, fi
 
 ## init, deinit, and use methods
 
-Both Battlers and BattleControllers are event emitters. Different moves, equipment, masks, and status effects all do different and complex things - so each is provided with an init and a deinit function when they're defined (at game start). These functions should add event handlers for all the events they want to change to either Battler(s) or the BattleController.
+Both Battlers and BattleControllers are PromisedEventTargets (see below) which is just a variation of a regular EventTarget. Different moves, equipment, masks, and status effects all do different and complex things - so each is provided with an init and a deinit function when they're defined (at game start). These functions should add event handlers for all the events they want to change to either Battler(s) or the BattleController. The listeners are provided the event instance, and must return promises that resolve to the same event. This way, events can also be mutated by different listeners.
 
 For example, a "poison" status effect would have an init function that would add a "turnBegin" event to the affected Battler (must provided when init is called for a status) and in that event, an animation or sound might play along with the HP being subtracted.
 
@@ -129,7 +130,9 @@ Once that status is no longer active - like if the battle has ended, the status 
 
 This sytem allows for flexible, complex, and unique effects for every mask, status, or piece of equipment. However, it is critical that these methods are called when necessary or you may end up with leftover events that don't make sense and can't be removed! Imagine you think you're cured of poison - but just turns out you've got poison forever because deinit wasn't called right.
 
-This system of init/deinit is also reflected in the file structure: the "battle" folder has the actual code for things like Battlers and the BattleController, which call the init/deinit methods and dispatch events. The top-level files in the "data" folder export lists of things such as masks, statuses, etc. which pull in those init and deinit methods from the deeper level folders - so that each unique effect can have its own file and can be worked on without any one file becoming too chonky or unwieldly.
+This system of init/deinit is also reflected in the file structure: the "battle" folder has the actual code for things like Battlers and the BattleController, which call the init/deinit methods and dispatch events. The top-level files in the "data" folder export lists of things such as masks, statuses, etc. which pull in those init and deinit methods from the deeper level folders - so that each unique effect can have its own file and can be worked on without any one file becoming too chonky. This also should make it easier to focus and refine singular listeners.
+
+The main difference between the PromisedEventTargets and regular EventTargets is that PromisedEventTargets listeners must return promises - these are all evaluated in order and wait for one another to complete before moving on. This should make it easy for sequential battle events to occur, as opposed to everything at once.
 
 Some things have a "use" method, in addition to or in place of init/deinit. These indicate items or masks that can be used in a battle. Use is pretty simple - it is called when a Battler uses it and must be provided a user and target(s). For example, when you have a mask it provides a passive or conditional effect - applied via init/deinit - and when it is activated in battle, the use method is called.
 
@@ -153,7 +156,7 @@ Battlers have access to different "movesets" defined by their template. Player B
 
 Special Moves have a "use" method, like items or masks, which returns a promise that resolves once all the moves effects are over and complete.
 
-# Netplay
+## Netplay
 
 Write specifics about how the network is going to work. Some preliminary thoughts:
 - Battlers must have AI that evaluates situations equally, regardless of if its a friendly or a foe. In fact, it may as well not know. However, in an online session, AI must be evaluated on the server-side so that every client has the same results...
@@ -171,26 +174,36 @@ Oh man, this gonna be tricky.
 
 You'll have to import client code and find a way to run it in the context of a server. You will also need to make it so battles can be run completely just by text - in the context of a command line.
 
+## "Promised" Events
+
+For better flow during a battle, there is a variation of EventTarget that events can be added to which must return a promise. Rather than execute all events simultaneously, they are called in order and the next event will not be executed until earlier promises resolve. This way, you can chain multiple animations or effects at once and rest assured they will occur in order. This is where init/deinit should add their event listeners. If any promise in the event rejects, then the rest of the listeners (those with lower priority, or that were added later) will not be called. Dispatching events now returns a promise - which you should either use ```.then```, ```.finally```, and/or ```.catch``` on.
+
+Promised event listeners can also take a priority - higher priority listeners happen before those with lower priority, though they all will still happen. You can also specify for an event to happen once, after which the listener is removed.
+
+For example: an accessory has an effect every time you attack with it. The accessory's init function adds a promised event to that event type, while deinit removes it. A mask also has an effect every time you attack, so it adds a promised event listener the same way. When the attack happens, both events happen in order (if priority is given) or in the order the listeners were added.
+
+Note that **you should not use ```async/await``` for these events except for in testing.** This is because ```async/await``` will make everything pause until the promise resolves, which is impossible if things are paused as most PromisedEvents depend, under normal circumstances, on any number of future animation frames. If execution pauses, the frames will not happen naturally and so the promises will, unintuitively, never resolve. However, ```async/await``` are incredibly useful in a testing situation as you won't need to chain ```.then``` every time you want to use a promise. You can also set the ```instantaneous``` flag of PromisedEvents to resolve them and their effects immediately - just make sure you implement support for ```instantaneous``` every time you add events to a PromisedEventTarget. But even instantaneous promises wait for a full JavaScript loop to complete before resolving, so you'll still need either ```.then``` or ```async/await```.
+
+**Also note that all PromisedEvent listeners must return a promise of their own and resolve to an event instance.** To resolve events of different types, you may need to call and use their promises and then ```resolve()``` your outer promise in the ```.then()``` call of the different event. These promises resolve to the event, that way you can mutate the event through different listeners - such as changing the damage of an attack or the turns of an applied status.
+
+### Writing PromisedEvent Promises/Listeners
+
+- Always handle the ```instantaneous``` property of PromisedEvents. It should not run any frame-by-frame effects and it should make it possible to run battles via node, and not just in browser.
+- Always be mindful of what type of events you resolve to. Events of different types can not share the same promise chain - you may need to nest promises within each other if one event depends on the completion of another.
+- Listeners may mutate events as they see fit. There is no way to know exactly what listeners have occured by the time a dispatched event promise fully resolves
+- Always use ```.catch``` everytime you use a promise! Don't allow errors to pass through. However, if a listener rejects, it cancels all further listeners on an event from firing. If you have listeners that you know may reject, it may be best to let them fail silently. Use ```.finally()``` to continue execution regardless.
+
 # To-do
 
-- Moves/Special - set up classes, write necessary documentation bits, and standardize the language - say "special moves" rather than "elemental" moves.
 - Plan out battle flow - this is a necessary step. build a basic skeleton for BattleController
     - Ex. who attacks when?
     - What data is provided to BattleControllerEvent and BattlerEvent?
-- Begin restructuring source for a server component as well
-    - Idea file structure:
-        - ```src/client``` Modules used only by the client, such as GL setup, sprites, sounds, effects, and connecting to servers.
-        - ```src/server``` Modules used only by the server, such as commandline, configuration, and receiving connections.
-        - ```src/common``` Modules used by both client and server, such as game information, BattleControllers, Battlers, data with init/deinit/use, etc.
-    - All classes that run important game information (like BattleController and Battler) should have a "puppet" flag, which will only let them get data over the network when active. So they can be used both in offline singleplayer, or online, with minimal difference. Most code will probably go in here, as it should be almost entirely dual-purposed for a commandline or a browser environment.
+- Build BattleController
+- Figure out how Battlers' actions are set and executed
+- Effect chains for battler's KO, damage, heal, apply status, remove status, etc.
 - Make battle simulation (a battle with no clients, run in node only)
     - All classes that return promises (like Timelines and Actions) should resolve immediately
-- Set up testing suite and run test battles
+- Design battle hud
+- Begin making client
 
-init and deinit are provided full access to the BattleController and every Battler present - so they can add events to virtually anything, anywhere.
-Weapons: init and deinit
-Equipment: init and deinit
-Accessories: init and deinit
-Inventory Items: use
-
-- Design battle HUD?
+- Keep in mind how networking is gonna handle this (and all these promises)

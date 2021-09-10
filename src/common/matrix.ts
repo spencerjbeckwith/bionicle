@@ -3,11 +3,8 @@ type M3 = [ number, number, number, number, number, number, number, number, numb
 
 /** Allows for transformations by chaining different functions onto existing Matrices. */
 class Matrix {
-    values: M3;
     static identity: M3;
-    constructor(values: M3) {
-        this.values = values;
-    }
+    constructor(public values: M3) {}
 
     /** Returns a new projection Matrix based on the provided view dimensions. Should only be called when the view size changes. */
     static projection: (viewWidth: number, viewHeight: number) => Matrix;

@@ -8,24 +8,16 @@ type ActionDataType = SpecialMove | UsableItem | Mask | null;
 
 /** Represents what a Battler is going to do on any turn. */
 class Action {
-    type: ActionType;
-    executor: Battler;
-    target: Battler | Battler[] | null;
-
     /** Extra data provided to an action, dependent on the type. */
-    data: ActionDataType;
-
+    data: ActionDataType | null;
     cancelled: boolean;
-    instantaneous: boolean;
-
-    constructor(type: ActionType, executor: Battler, target: Battler | Battler[] | null, data?: ActionDataType, instantaneous = false) {
+    constructor(public type: ActionType, public executor: Battler, public target: Battler | Battler[] | null, data?: ActionDataType, public instantaneous = false) {
         this.type = type;
         this.executor = executor;
         this.target = target;
 
         this.data = data || null;
         this.cancelled = false;
-        this.instantaneous = instantaneous;
     }
 
     /** Returns a promise that resolves when the Action is fulfilled/after all effects and animations, or rejects if there is a problem with the Action such as an invalid type. */

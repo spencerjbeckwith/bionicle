@@ -1,4 +1,5 @@
 import Battler from "../battle/battler";
+import deepfreeze from 'deepfreeze';
 
 interface SpecialMoveList {
     flare: SpecialMove;
@@ -34,7 +35,5 @@ const specialMoves : SpecialMoveList = {
     // New moves here
 }
 
-Object.freeze(specialMoves);
-// Freeze new moves here
-
+deepfreeze(specialMoves);
 export { SpecialMove, LevelUpMove, specialMoves };

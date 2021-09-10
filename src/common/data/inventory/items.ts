@@ -1,4 +1,5 @@
 import Battler from "../../battle/battler";
+import deepfreeze from 'deepfreeze';
 
 interface InventoryItemList {
     bambooDisk: UsableItem;
@@ -55,8 +56,5 @@ const inventoryItems: InventoryItemList = {
     // New items here
 }
 
-Object.freeze(inventoryItems);
-Object.freeze(inventoryItems.bambooDisk);
-// Freeze new items here
-
+deepfreeze(inventoryItems);
 export { InventoryItem, UsableItem, EquipItem, inventoryItems };

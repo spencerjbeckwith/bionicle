@@ -1,4 +1,5 @@
 import { EquipItem } from './items';
+import deepfreeze from 'deepfreeze';
 
 interface AccessoryList {
     // New accessories here
@@ -12,7 +13,5 @@ const accessories : AccessoryList = {
     // Define accessories here - must include properties of EquipItem and InventoryItem
 }
 
-Object.freeze(accessories);
-// Freeze new accessories here
-
+deepfreeze(accessories);
 export { Accessory, accessories };

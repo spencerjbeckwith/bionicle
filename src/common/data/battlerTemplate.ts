@@ -7,6 +7,9 @@ import { Mask, masks } from './masks';
 import StatCollection from './stats';
 import { spr, Sprite } from '../sprite';
 import { SpecialMove } from './moves';
+import { StatusEffect } from './statuses';
+
+import deepfreeze from 'deepfreeze';
 
 interface BattlerTemplateList {
     fikou: BattlerTemplate;
@@ -28,6 +31,7 @@ interface BattlerTemplate {
     masks: Mask[];
     moves: SpecialMove[];
     stats: StatCollection;
+    immunities: StatusEffect[];
 
     weapon: Weapon | null;
     equipment: Equipment | null;
@@ -67,6 +71,7 @@ const battlerTemplates : BattlerTemplateList = {
             level: 1,
             xp: 0,
         },
+        immunities: [],
         weapon: null,
         equipment: null,
         accessory: null,
@@ -76,9 +81,5 @@ const battlerTemplates : BattlerTemplateList = {
     // More templates here
 }
 
-Object.freeze(battlerTemplates);
-Object.freeze(battlerTemplates.fikou);
-
-// Freeze new templates here
-
+deepfreeze(battlerTemplates);
 export { BattlerTemplate, battlerTemplates };
