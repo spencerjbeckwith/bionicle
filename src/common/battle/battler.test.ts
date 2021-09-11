@@ -1,10 +1,12 @@
 import { BattlerTemplate } from '../data/battlerTemplate';
-import { BattlerEndTurnEvent, BattlerDamageEvent, BattlerKnockOutEvent } from '../data/events';
+import { BattlerEndRoundEvent, BattlerDamageEvent, BattlerKnockOutEvent, BattlerBeginTurnEvent, BattlerEndTurnEvent } from '../data/events';
 import { Accessory } from '../data/inventory/accessories';
 import { Equipment } from '../data/inventory/equipment';
 import { Weapon } from '../data/inventory/weapons';
 import { Mask } from '../data/masks';
 import { StatusEffect } from '../data/statuses';
+import { Action } from './actions';
+import BattleController from './battleController';
 import Battler from './battler';
 
 const mockBattlerTemplate: BattlerTemplate = {
@@ -70,8 +72,8 @@ test('status effects applied/removed',async () => {
 
     // Apply status again and run turns
     await mock.applyStatus(mockStatus,2);
-    await mock.endTurn();
-    await mock.endTurn();
+    await mock.endRound();
+    await mock.endRound();
     expect(mock.statusEffects.length).toBe(0);
 
     // Ensure init/deinit were properly called
@@ -171,7 +173,7 @@ test('weapon, equipment, accessory, and mask equipping',() => {
     expect(mockMask.deinit).toBeCalledTimes(2);
 });
 
-test('end turn removes statuses and dispatches event', async () => {
+test('end round removes statuses and dispatches event', async () => {
     const mock = new Battler(mockBattlerTemplate);
     const mockStatus: StatusEffect = {
         curable: false,
@@ -182,15 +184,15 @@ test('end turn removes statuses and dispatches event', async () => {
     }
 
     const eventMock = jest.fn();
-    mock.addPromisedEventListener('endTurn',(event: BattlerEndTurnEvent) => {
-        return new Promise<BattlerEndTurnEvent>((resolve, reject) => {
+    mock.addPromisedEventListener('endRound',(event: BattlerEndRoundEvent) => {
+        return new Promise<BattlerEndRoundEvent>((resolve, reject) => {
             eventMock();
             resolve(event);
         });
     });
 
     await mock.applyStatus(mockStatus,1);
-    await mock.endTurn();
+    await mock.endRound();
 
     expect(mockStatus.init).toBeCalled();
     expect(mockStatus.deinit).toBeCalled();
@@ -241,4 +243,86 @@ test('too much damage will KO', async () => {
     expect(mock.stats.hp).toBe(0);
     expect(mock.isKOed).toBe(true);
     expect(eventMock).toBeCalled();
+});
+
+test('doTurn() executes BattlerBeginTurnEvent, the action, and BattlerEndTurnEvent',async () => {
+    const battler = new Battler(mockBattlerTemplate);
+    const action = new Action('attack',battler,null);
+    const mockFn = jest.fn();
+
+    // Add our events
+    battler.addPromisedEventListener<BattlerBeginTurnEvent>('beginTurn',(event) => {
+        return new Promise<BattlerBeginTurnEvent>((resolve, reject) => {
+            mockFn();
+            resolve(event);
+        });
+    });
+
+    battler.addPromisedEventListener<BattlerEndTurnEvent>('endTurn',(event) => {
+        return new Promise<BattlerEndTurnEvent>((resolve, reject) => {
+            mockFn();
+            resolve(event);
+        });
+    });
+
+    // Override our action's default execute function
+    action.execute = (bc: BattleController) => {
+        return new Promise((resolve, reject) => {
+            mockFn();
+            resolve();
+        });
+    }
+
+    await battler.doTurn(action);
+
+    expect(mockFn).toBeCalledTimes(3);
+});
+
+test('BattlerBeginTurnEvent and BattlerEndTurnEvent can mutate the doTurn() action',async () => {
+    const battler = new Battler(mockBattlerTemplate);
+    const battler2 = new Battler(mockBattlerTemplate);
+    const action = new Action('attack',battler,null);
+    const mockFn = jest.fn();
+
+    // Add our events
+    battler.addPromisedEventListener<BattlerBeginTurnEvent>('beginTurn',(event) => {
+        return new Promise<BattlerBeginTurnEvent>((resolve, reject) => {
+            event.action.type = 'item';
+            mockFn();
+            resolve(event);
+        });
+    });
+
+    battler.addPromisedEventListener<BattlerEndTurnEvent>('endTurn',(event) => {
+        return new Promise<BattlerEndTurnEvent>((resolve, reject) => {
+            event.action.target = battler2;
+            mockFn();
+            resolve(event);
+        });
+    });
+
+    // Override our action's default execute function
+    action.execute = (bc: BattleController) => {
+        return new Promise((resolve, rjeect) => {
+            mockFn();
+            resolve();
+        })
+    }
+    
+    await battler.doTurn(action);
+
+    expect(action.type).toBe('item');
+    expect(action.target).toBe(battler2);
+    expect(mockFn).toBeCalledTimes(3);
+});
+
+test('getSide() returns correctly',() => {
+    const ally = new Battler(mockBattlerTemplate);
+    const foe = new Battler(mockBattlerTemplate);
+    const neither = new Battler(mockBattlerTemplate);
+    new BattleController([ ally ], [ foe ]);
+
+    expect(ally.getSide()).toBe('allies');
+    expect(foe.getSide()).toBe('foes');
+    expect(neither.getSide()).toBe(false);
 });

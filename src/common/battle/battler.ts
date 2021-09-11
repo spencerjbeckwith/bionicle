@@ -1,7 +1,7 @@
 import BattleController from './battleController';
 import StatCollection from '../data/stats';
 import { BattlerTemplate } from '../data/battlerTemplate';
-import { BattlerBeginTurnEvent, BattlerEndTurnEvent, BattlerDamageEvent, BattlerKnockOutEvent, BattlerEvent, BattlerEventTypes, BattlerHealEvent, BattlerStatusAppliedEvent, BattlerStatusRemovedEvent } from '../data/events';
+import { BattlerBeginTurnEvent, BattlerEndTurnEvent, BattlerBeginRoundEvent, BattlerEndRoundEvent, BattlerDamageEvent, BattlerKnockOutEvent, BattlerEventTypes, BattlerHealEvent, BattlerStatusAppliedEvent, BattlerStatusRemovedEvent, BattlerEvent } from '../data/events';
 import { Action } from './actions';
 import { Weapon } from '../data/inventory/weapons';
 import { Equipment } from '../data/inventory/equipment';
@@ -89,11 +89,58 @@ class Battler extends PromisedEventTarget {
         super.addPromisedEventListener(type, listener, priority, once);
     }
 
-    beginTurn(): Promise<BattlerBeginTurnEvent> {
-        return super.dispatchPromisedEvent(new BattlerBeginTurnEvent(this));
+    /** Dispatches two BattlerEvents before and after a given executor, which is provided the first event and must return a promise. Should be to surround a promise with events on either side, before and after events. Executes all listeners on the provided events as well as the executor in the given order. When all done, this method's promise resolves to the second event. */
+    dispatchEventTriad<ev1, ev2>(before: ev1 & BattlerEvent, after: ev2 & BattlerEvent, execute: (firstEvent: ev1 & BattlerEvent) => Promise<void>): Promise<ev2 & BattlerEvent> {
+        return new Promise<ev2 & BattlerEvent>((resolve, reject) => {
+            // Fire first event
+            this.dispatchPromisedEvent(before).then((firstEvent) => {
+                // First event resolved, do our execution
+                execute(firstEvent).then(() => {
+                    // Execution done, fire second event
+                    this.dispatchPromisedEvent(after).then((secondEvent) => {
+                        // Second event done, resolve outer promise
+                        resolve(secondEvent);
+                    }).catch((err) => {
+                        console.error(`Battler ${this.template.name}: Event triad rejected second event!`);
+                        reject(err);
+                    });
+                }).catch((err) => {
+                    console.error(`Battler ${this.template.name}: Event triad rejected execution!`);
+                    reject(err);
+                })
+            }).catch((err) => {
+                console.error(`Battler ${this.template.name}: Event triad rejected first event!`);
+                reject(err);
+            });
+        });
     }
 
-    endTurn(): Promise<BattlerEndTurnEvent> {
+    /** Executes an action. The action must have this Battler as its executor. This also fires the BattlerBeginTurnEvent before the action, and the BattlerAfterTurnEvent after the action. Returns a promise which resolves to the initial action after all events have fired. */
+    doTurn(action: Action, instantaneous = false): Promise<Action> {
+        return new Promise((resolve, reject) => {
+            if (action.executor !== this) {
+                // We should only execute our own actions!
+                reject(`Battler ${this.template.name}: Battler-action mismatch!`);
+            } else {
+                this.dispatchEventTriad(new BattlerBeginTurnEvent(this, action, instantaneous), new BattlerEndTurnEvent( this, action, instantaneous), (firstEvent) => {
+                    return firstEvent.action.execute(this.bc);
+                }).then((secondEvent) => {
+                    resolve(secondEvent.action);
+                }).catch((err) => {
+                    console.error(`Battler ${this.template.name}: doTurn() event triad rejected!`);
+                    reject(err);
+                });
+            }
+        });
+    }
+
+    /** Should be called at the start of every round, before any Battler begins their actions. */
+    beginRound(instantaneous = false): Promise<BattlerBeginRoundEvent> {
+        return this.dispatchPromisedEvent(new BattlerBeginRoundEvent(this, instantaneous));
+    }
+
+    /** Should be called at the end of every round, after all Battler's actions are done. */
+    endRound(instantaneous = false): Promise<BattlerEndRoundEvent> {
         return new Promise((resolve, reject) => {
             // This looks nasty at first but lemme explain
             // To return the correct event, we must asynchronously dispatch the removeStatus event when statuses get removed
@@ -122,13 +169,14 @@ class Battler extends PromisedEventTarget {
 
                 // Resolve our main promise only after the statuses are removed
                 promise.then(() => {
-                    resolve(super.dispatchPromisedEvent(new BattlerEndTurnEvent(this)));
+                    resolve(this.dispatchPromisedEvent(new BattlerEndRoundEvent(this, instantaneous)));
                 }).catch((err) => {
+                    console.error(`Battler ${this.template.name}: Rejected status removal!`);
                     reject(err);
                 });
             } else {
                 // No status to remove: resolve with our new promise
-                resolve(super.dispatchPromisedEvent(new BattlerEndTurnEvent(this)));
+                resolve(this.dispatchPromisedEvent(new BattlerEndRoundEvent(this, instantaneous)));
             } 
         });
     }
@@ -194,7 +242,7 @@ class Battler extends PromisedEventTarget {
     }
 
     /** Applies a new status to this Battler. If the status is already present, the turns are added together up the status's max possible turns. Returns a promise which will only reject if there's an error on the BattlerStatusAppliedEvent. */
-    applyStatus(status: StatusEffect, turns: number): Promise<BattlerStatusAppliedEvent | null> {
+    applyStatus(status: StatusEffect, turns: number, instantaneous = false): Promise<BattlerStatusAppliedEvent | null> {
         return new Promise((resolve, reject) => {
             if (this.template.immunities.includes(status)) {
                 // We're immune, ha ha
@@ -202,7 +250,7 @@ class Battler extends PromisedEventTarget {
             } else {
                 const index = this.getStatusIndex(status);
                 if (index === null) {
-                    this.dispatchPromisedEvent(new BattlerStatusAppliedEvent(this,status,turns)).then((event) => {
+                    this.dispatchPromisedEvent(new BattlerStatusAppliedEvent(this,status, turns, instantaneous)).then((event) => {
                         // Add status and call init on us
                         this.statusEffects.push(new AppliedStatusEffect(event.status, Math.min(event.turns, status.maxTurns)));
                         event.status.init(this);
@@ -210,6 +258,7 @@ class Battler extends PromisedEventTarget {
                         // effect?
                         resolve(event);
                     }).catch((err) => {
+                        console.error(`Battler ${this.template.name}: Rejected status applied event!`);
                         reject(err);
                     });
                 } else {
@@ -224,12 +273,12 @@ class Battler extends PromisedEventTarget {
     }
 
     /** Removes a specific curable status from this Battler. If force is true, it will be removed even if it is not curable. Returns a promise which will only reject if there's an error on the BattlerStatusRemovedEvent. */
-    removeStatus(status: StatusEffect, force = false): Promise<BattlerStatusRemovedEvent | null> {
+    removeStatus(status: StatusEffect, force = false, instantaneous = false): Promise<BattlerStatusRemovedEvent | null> {
         return new Promise((resolve, reject) => {
             const index = this.getStatusIndex(status);
             if (index !== null) {
                 if (status.curable || force) {
-                    return this.dispatchPromisedEvent(new BattlerStatusRemovedEvent(this,status,force)).then((event) => {
+                    return this.dispatchPromisedEvent(new BattlerStatusRemovedEvent(this, status, force, instantaneous)).then((event) => {
                         // We have the status, splice its index out and call deinit
                         this.statusEffects.splice(index,1);
                         status.deinit(this);
@@ -237,6 +286,7 @@ class Battler extends PromisedEventTarget {
                         // effect?
                         resolve(event);
                     }).catch((err) => {
+                        console.error(`Battler ${this.template.name}: Rejected status removed event!`);
                         reject(err);
                     });
                 }
@@ -276,9 +326,9 @@ class Battler extends PromisedEventTarget {
     }
 
     /** Damages this Battler's HP or nova by a certain amount. */
-    damage(amount: number, stat: 'hp' | 'nova' = 'hp', source: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack'): Promise<void> {
+    damage(amount: number, stat: 'hp' | 'nova' = 'hp', source: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack', instantaneous = false): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            this.dispatchPromisedEvent<BattlerDamageEvent>(new BattlerDamageEvent(this,amount,stat,source)).then((event) => {
+            this.dispatchPromisedEvent<BattlerDamageEvent>(new BattlerDamageEvent(this, amount, stat, source, instantaneous)).then((event) => {
                 event.amount = Math.round(event.amount);
                 if (stat === 'hp') {
                     this.stats.hp -= event.amount;
@@ -307,15 +357,16 @@ class Battler extends PromisedEventTarget {
                     resolve();
                 }
             }).catch((err) => {
+                console.error(`Battler ${this.template.name}: Rejected damage event!`);
                 reject(err);
             });
         });
     }
 
     /** Restores this Battler's HP or nova by a certain amount. */
-    heal(amount: number, stat: 'hp' | 'nova' = 'hp', source: 'special' | 'item' | 'status' | 'mask' = 'item'): Promise<void> {
+    heal(amount: number, stat: 'hp' | 'nova' = 'hp', source: 'special' | 'item' | 'status' | 'mask' = 'item', instantaneous = false): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            this.dispatchPromisedEvent(new BattlerHealEvent(this,amount,stat,source)).then((event) => {
+            this.dispatchPromisedEvent(new BattlerHealEvent(this, amount, stat, source, instantaneous)).then((event) => {
                 event.amount = Math.round(event.amount);
                 if (stat === 'hp') {
                     this.stats.hp += event.amount;
@@ -335,15 +386,16 @@ class Battler extends PromisedEventTarget {
                     resolve();
                 }
             }).catch((err) => {
+                console.error(`Battler ${this.template.name}: Rejected heal event!`);
                 reject(err);
             });
         });
     }
 
     /** KOs the Battler. */
-    knockOut(cause: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack'): Promise<void> {
+    knockOut(cause: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack', instantaneous = false): Promise<void> {
         return new Promise((resolve,reject) => {
-            this.dispatchPromisedEvent(new BattlerKnockOutEvent(this,cause)).then((event) => {
+            this.dispatchPromisedEvent(new BattlerKnockOutEvent(this, cause, instantaneous)).then((event) => {
                 this.isKOed = true;
                 if (this.isToa) {
                     // Don't die for real - just KO
@@ -359,19 +411,59 @@ class Battler extends PromisedEventTarget {
                     resolve();
                 }
             }).catch((err) => {
+                console.error(`Battler ${this.template.name}: Rejected KO event!`);
                 reject(err);
             });
         });
     }
 
+    /** Returns what side in a battle we belong to. Return "allies", "foes", or false if this Battler is neither... somehow. */
+    getSide(): 'allies' | 'foes' | false {
+        if (!this.bc) {return false;}
+        if (this.bc.allies.includes(this)) {
+            return 'allies';
+        } else if (this.bc.foes.includes(this)) {
+            return 'foes';
+        }
+
+        return false;
+    }
+
+    determineAction(bc: BattleController, instantaneous = false): Promise<Action> {
+        if (!this.bc || this.bc.battleOver) {
+            // Set controller if it hasn't been set yet
+            this.bc = bc;
+        }
+        return new Promise((resolve, reject) => {
+
+            // If the local player, open HUD and allow for action selection
+
+            // If not the local player and playing online, wait for an online action response
+
+            // If not the local player and playing locally, use AI to evaluate best action
+
+            resolve(new Action('attack',this,null));
+
+        });
+    }
+
+    getAllActions(): Action[] {
+        const possibilities: Action[] = [];
+
+        // Add an attack action for every battler on the opposite side
+
+        // Add a special action for every valid target of each move
+
+        // Add an item action for every valid target of each item
+        
+        // Add a mask action for every valid target of every mask
+
+        // Add a protect action for every valid target of a protect move
+
+        return [];
+    }
+
     // Add methods to save and load a battler - like a Toa - in-between sessions? Via JSON?
-
-    // What other methods will go here? Different battle events?
-    // Method: getAllActions
-
-    // You'll want some AI methods:
-    //  Determine what actions could be taken -> getAllActions
-    //  Evaluate, using template AI weights, which actions have the most favorable effects via minimax... hm...
 }
 
 export default Battler;

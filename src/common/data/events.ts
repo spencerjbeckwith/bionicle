@@ -1,76 +1,124 @@
+import { Action } from '../battle/actions';
 import BattleController from '../battle/battleController';
 import Battler from '../battle/battler';
 import { PromisedEvent } from '../promisedEventTarget';
 import { StatusEffect } from './statuses';
 
-type BattleControllerEventTypes = 'start' | 'end' | 'turnStart' | 'turnEnd';
-type BattlerEventTypes = 'start' | 'end' | 'beginTurn' | 'endTurn' 
-    | 'damage' | 'heal' | 'knockOut' | 'statusApplied' | 'statusRemoved'
-    | 'beforeAction' | 'afterAction' ;
+type BattleControllerEventTypes = 'start' | 'end' | 'beginRound' | 'endRound';
+
+type BattlerEventTypes = 'start' | 'end' | 'beginTurn' | 'endTurn' | 'beginRound' | 'endRound' 
+    | 'damage' | 'heal' | 'knockOut' | 'statusApplied' | 'statusRemoved' | 'beforeAffected' | 'afterAffected';
 
 // BATTLER EVENTS
 
 class BattlerEvent extends PromisedEvent {
-    constructor(public type: BattlerEventTypes, public battler: Battler) {
-        super(type);
+    constructor(public type: BattlerEventTypes, public battler: Battler, instantaneous = false) {
+        super(type, instantaneous);
     }
 }
 
+/** Fires immediately before this Battler executes an action. */
 class BattlerBeginTurnEvent extends BattlerEvent {
-    constructor(battler: Battler) {
-        super('beginTurn',battler);
+    constructor(battler: Battler, public action: Action, instantaneous = false) {
+        super('beginTurn', battler, instantaneous);
     }
 }
 
+/** Fires after this Battler executes an action, after each target is affected. */
 class BattlerEndTurnEvent extends BattlerEvent {
-    constructor(battler: Battler) {
-        super('endTurn',battler);
+    constructor(battler: Battler, public action: Action, instantaneous = false) {
+        super('endTurn', battler, instantaneous);
     }
 }
 
+/** Fires at the beginning of a round, before any Battler takes an action, in same order that actions are taken. */
+class BattlerBeginRoundEvent extends BattlerEvent {
+    constructor(battler: Battler, instantaneous = false) {
+        super('beginRound', battler, instantaneous);
+    }
+}
+
+/** Fires at the end of a round, after every Battler takes their action, in same order that actions are taken. */
+class BattlerEndRoundEvent extends BattlerEvent {
+    constructor(battler: Battler, instantaneous = false) {
+        super('endRound', battler, instantaneous);
+    }
+}
+
+/** Fires immediately before any HP or nova damage is dealt to this Battler. */
 class BattlerDamageEvent extends BattlerEvent {
-    constructor(battler: Battler, public amount: number, public stat: 'hp' | 'nova' = 'hp', public source: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack') {
-        super('damage',battler);
+    constructor(battler: Battler, public amount: number, public stat: 'hp' | 'nova' = 'hp', public source: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack', instantaneous = false) {
+        super('damage', battler, instantaneous);
     }
 }
 
+/** Fires immediately before any HP or nova is restored to this Battler. */
 class BattlerHealEvent extends BattlerEvent {
-    constructor(battler: Battler, public amount: number, public stat: 'hp' | 'nova' = 'hp', public source: 'special' | 'item' | 'status' | 'mask' = 'item') {
-        super('heal',battler);
+    constructor(battler: Battler, public amount: number, public stat: 'hp' | 'nova' = 'hp', public source: 'special' | 'item' | 'status' | 'mask' = 'item', instantaneous = false) {
+        super('heal', battler, instantaneous);
     }
 }
 
+/** Fires immediately when any status is applied to this Battler initially, but not when turns are added to an already-applied status. */
 class BattlerStatusAppliedEvent extends BattlerEvent {
-    constructor(battler: Battler, public status: StatusEffect, public turns: number) {
-        super('statusApplied',battler);
+    constructor(battler: Battler, public status: StatusEffect, public turns: number, instantaneous = false) {
+        super('statusApplied', battler, instantaneous);
     }
 }
 
+/** Fires immediately when any status is removed from this Battler, including when it naturally expires or is cured. Is not fired when all statuses are cleared at once by Battler.RemoveAllStatuses(). */
 class BattlerStatusRemovedEvent extends BattlerEvent {
-    constructor(battler: Battler, public status: StatusEffect, public forced = false) {
-        super('statusRemoved',battler);
+    constructor(battler: Battler, public status: StatusEffect, public forced = false, instantaneous = false) {
+        super('statusRemoved', battler, instantaneous);
     }
 }
 
+/** Fires before sustained HP damage causes this Battler to be KOed, but after the damage is dealt. */
 class BattlerKnockOutEvent extends BattlerEvent {
-    constructor(battler: Battler, public cause: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack') {
-        super('knockOut',battler);
+    constructor(battler: Battler, public cause: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack', instantaneous = false) {
+        super('knockOut', battler, instantaneous);
+    }
+}
+
+/** Fires immediately before any action that targets this Battler executes. */
+class BattlerBeforeAffectedEvent extends BattlerEvent {
+    constructor(battler: Battler, public action: Action, instantaneous = false) {
+        super('beforeAffected', battler, instantaneous);
+    }
+}
+
+/** Fires immediately after any action that targets this Battler has executed. */
+class BattlerAfterAffectedEvent extends BattlerEvent {
+    constructor(battler: Battler, public action: Action, instantaneous = false) {
+        super('afterAffected', battler, instantaneous);
     }
 }
 
 // BATTLE CONTROLLER EVENTS
-// ...
+
+class BattleControllerEvent extends PromisedEvent {
+    constructor(public type: BattleControllerEventTypes, public bc: BattleController, instantaneous = false) {
+        super(type, instantaneous);
+    }
+}
+
+// ...?
 
 export { 
     BattleControllerEventTypes, 
     BattlerEventTypes, 
-
     BattlerEvent,
+    BattleControllerEvent,
+
     BattlerBeginTurnEvent,
     BattlerEndTurnEvent,
+    BattlerBeginRoundEvent,
+    BattlerEndRoundEvent,
     BattlerDamageEvent,
     BattlerHealEvent,
     BattlerStatusAppliedEvent,
     BattlerStatusRemovedEvent,
     BattlerKnockOutEvent,
+    BattlerBeforeAffectedEvent,
+    BattlerAfterAffectedEvent,
 }

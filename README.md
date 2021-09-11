@@ -112,6 +112,8 @@ Enemies can have more than one element, and their moveset is independent of what
 
 # Technical Info
 
+> You've surely heard of callback hell before, but now get ready to enter... *promise hell*.
+
 ## Battlers
 
 Every fighter in a conflict is represented by a Battler instance. These are managed by a BattleController instance.
@@ -188,22 +190,48 @@ Note that **you should not use ```async/await``` for these events except for in 
 
 ### Writing PromisedEvent Promises/Listeners
 
-- Always handle the ```instantaneous``` property of PromisedEvents. It should not run any frame-by-frame effects and it should make it possible to run battles via node, and not just in browser.
+- Always handle the ```instantaneous``` property of PromisedEvents. It should not run any frame-by-frame effects and it should make it possible to run battles via node, and not just in browser... all should resolve immediately. No need for a new animation frame.
 - Always be mindful of what type of events you resolve to. Events of different types can not share the same promise chain - you may need to nest promises within each other if one event depends on the completion of another.
 - Listeners may mutate events as they see fit. There is no way to know exactly what listeners have occured by the time a dispatched event promise fully resolves
-- Always use ```.catch``` everytime you use a promise! Don't allow errors to pass through. However, if a listener rejects, it cancels all further listeners on an event from firing. If you have listeners that you know may reject, it may be best to let them fail silently. Use ```.finally()``` to continue execution regardless.
+- Always use ```.catch``` everytime you use a promise! Don't allow errors to pass through. However, if a listener rejects, it cancels all further listeners on an event from firing. If you have listeners that you know may reject, it may be best to let them fail silently. You could use ```.finally()``` to continue execution regardless.
+
+## Anatomy of a Battle Round
+
+*In a nutshell... Since most methods on Battlers are asynchronous and return promises, you end with promises waiting on promises waiting on promises... turtles all the way down. It's the most repulsive Russian nesting-doll situation you've ever seen.*
+
+An important terminology distinction to make is that a "turn" refers to a single Battler doing their Action, while a "round" refers to every Battler doing all their Actions. Each Battler gets one Action per round, and only one turn per round as well. The distinction exists because BattlerBeginRoundEvent and BattlerBeginTurnEvent (and their "after" counterparts) fire at different times.
+
+As for the real series of events in a battle round, it's actually pretty nasty. BattleController calls ```startRound()```, which does the following:
+    - Asynchronously get the Actions of every Battler that Round via ```Battler.determineAction()```
+    - Order the Battler's according to their speed
+    - Fire every Battler's BattlerBeginRoundEvent, in speed order
+    - Run every Battler's BattlerBeginTurnEvent and then their Action, via ```BattlerController.doActions()```
+        - Depending on the Action, other Battler's BattlerBeforeAffectedEvent, BattlerDamageEvent, BattlerHealEvent, BattlerStatusAppliedEvent, BattlerStatusRemovedEvent, BattlerKnockOutEvent, BattlerAfterAffectedEvents, etc. may fire
+        - Finally, run the Battler's BattlerEndTurnEvent after the Action is complete
+        - Repeat for each subsequent Battler
+    - Fire every Battler's BattlerRoundEndEvent, in (a potentially different) speed order
+    - Then depending on the reuslt of ```doActions()```, ```startRound()``` may be called again. If not, the battle ends.
+
+So to start a battle, ```startRound()``` is all that needs to be called and it will recursively call itself via its abominable and infinite promise chain. Keep in mind that *every single event that fires* (as well as most flow functions) is a new Promise. They're literally everywhere, but I still beleive this is the best approach to handling asynchronous network battles in sequential orders with a dynamic event, effect, and timeline system.
+
+*Any rejection anywhere in the chain may break the entire battle, so be careful and be sure to use ```.finally()``` and make sure you always catch and handle rejections appropriately!*
 
 # To-do
 
-- Plan out battle flow - this is a necessary step. build a basic skeleton for BattleController
-    - Ex. who attacks when?
-    - What data is provided to BattleControllerEvent and BattlerEvent?
-- Build BattleController
-- Figure out how Battlers' actions are set and executed
-- Effect chains for battler's KO, damage, heal, apply status, remove status, etc.
+- Implement Actions
+- Write a test for BattleController.startRound()
+- Should BattleController dispatch any events? Does it need to extend the PromisedEventTarget at all?
+- Where does randomness come from when executing actions? Netcode-wise...
+    - BattleController's startRound() should only be called server-side:
+        - determineAction, on server-side Battler instances, should await a valid network response
+        - once all Actions come in (or time expires?) send all actions to the clients - AFTER RE-RANDOMIZING THEM!
+        - puppet BattleControllers should then call doActions() once they get the actions
+        - server BattleController determines win condition, and if no win, send out updated Battlers and battle state (just to re-sync every turn)
+- How are Actions and Battlers sent over the network?
 - Make battle simulation (a battle with no clients, run in node only)
     - All classes that return promises (like Timelines and Actions) should resolve immediately
 - Design battle hud
-- Begin making client
+- How does Client call BattleController and Battler?
+    - Begin making client
 
 - Keep in mind how networking is gonna handle this (and all these promises)

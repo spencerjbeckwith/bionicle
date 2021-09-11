@@ -82,11 +82,9 @@ class PromisedEventTarget {
                 promise = promise.then(() => listenerArray[i].listener(event));
             }
             promise = promise.catch((err) => {
-                if (err instanceof Error) {
-                    throw err;
-                } else {
-                    // 
-                }
+                // Will this need to change later?
+                console.error(`PromisedEventTarget.dispatchPromisedEvent() rejected!`);
+                throw err;
             });
 
             // Filter out any listener set to happen once
