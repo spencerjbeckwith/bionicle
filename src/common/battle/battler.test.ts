@@ -1,4 +1,3 @@
-import { BattlerTemplate } from '../data/battlerTemplate';
 import { BattlerEndRoundEvent, BattlerDamageEvent, BattlerKnockOutEvent, BattlerBeginTurnEvent, BattlerEndTurnEvent } from '../data/events';
 import { Accessory } from '../data/inventory/accessories';
 import { Equipment } from '../data/inventory/equipment';
@@ -8,40 +7,8 @@ import { StatusEffect } from '../data/statuses';
 import { Action } from './actions';
 import BattleController from './battleController';
 import Battler from './battler';
+import mockTemplate from './mocks/mockTemplate';
 
-const mockBattlerTemplate: BattlerTemplate = {
-    weapon: null,
-    equipment: null,
-    accessory: null,
-    masks: [],
-
-    name: '',
-    description: '',
-    dropMoney: 0,
-    dropXP: 0,
-    elements: [],
-    immunities: [],
-    inventory: [],
-    moves: [],
-    palette: 0,
-    sprite: null,
-    stats: {
-        hp: 10,
-        maxHP: 10,
-        nova: 10,
-        maxNova: 10,
-        attack: 2,
-        defense: 1,
-        elAttack: 2,
-        elDefense: 1,
-        accuracy: 100,
-        evasion: 0,
-        critical: 0,
-        level: 0,
-        speed: 1,
-        xp: 0,
-    }
-}
 
 test('status effects applied/removed',async () => {
     const mockStatus: StatusEffect = {
@@ -53,7 +20,7 @@ test('status effects applied/removed',async () => {
     }
 
     // Status application
-    const mock = new Battler(mockBattlerTemplate);
+    const mock = new Battler(mockTemplate);
     await mock.applyStatus(mockStatus,3);
     // Only status should get first index in array
     const index = mock.getStatusIndex(mockStatus);
@@ -127,7 +94,7 @@ test('weapon, equipment, accessory, and mask equipping',() => {
     }
 
     // Equip and remove a weapon
-    const mock = new Battler(mockBattlerTemplate);
+    const mock = new Battler(mockTemplate);
     expect(mock.weapon).toBe(null);
     expect(mock.equipWeapon(mockWeapon)).toBe(null);
     expect(mock.weapon).toBe(mockWeapon);
@@ -174,7 +141,7 @@ test('weapon, equipment, accessory, and mask equipping',() => {
 });
 
 test('end round removes statuses and dispatches event', async () => {
-    const mock = new Battler(mockBattlerTemplate);
+    const mock = new Battler(mockTemplate);
     const mockStatus: StatusEffect = {
         curable: false,
         maxTurns: 100,
@@ -200,7 +167,7 @@ test('end round removes statuses and dispatches event', async () => {
 });
 
 test('events may be mutated through resolving promises', async () => {
-    const mock = new Battler(mockBattlerTemplate);
+    const mock = new Battler(mockTemplate);
     const eventMock = jest.fn();
     
     // Will happen second (priority 2)
@@ -228,7 +195,7 @@ test('events may be mutated through resolving promises', async () => {
 });
 
 test('too much damage will KO', async () => {
-    const mock = new Battler(mockBattlerTemplate);
+    const mock = new Battler(mockTemplate);
     const eventMock = jest.fn();
 
     mock.addPromisedEventListener('knockOut',(event: BattlerKnockOutEvent) => {
@@ -246,7 +213,7 @@ test('too much damage will KO', async () => {
 });
 
 test('doTurn() executes BattlerBeginTurnEvent, the action, and BattlerEndTurnEvent',async () => {
-    const battler = new Battler(mockBattlerTemplate);
+    const battler = new Battler(mockTemplate);
     const action = new Action('attack',battler,null);
     const mockFn = jest.fn();
 
@@ -279,8 +246,8 @@ test('doTurn() executes BattlerBeginTurnEvent, the action, and BattlerEndTurnEve
 });
 
 test('BattlerBeginTurnEvent and BattlerEndTurnEvent can mutate the doTurn() action',async () => {
-    const battler = new Battler(mockBattlerTemplate);
-    const battler2 = new Battler(mockBattlerTemplate);
+    const battler = new Battler(mockTemplate);
+    const battler2 = new Battler(mockTemplate);
     const action = new Action('attack',battler,null);
     const mockFn = jest.fn();
 
@@ -317,9 +284,9 @@ test('BattlerBeginTurnEvent and BattlerEndTurnEvent can mutate the doTurn() acti
 });
 
 test('getSide() returns correctly',() => {
-    const ally = new Battler(mockBattlerTemplate);
-    const foe = new Battler(mockBattlerTemplate);
-    const neither = new Battler(mockBattlerTemplate);
+    const ally = new Battler(mockTemplate);
+    const foe = new Battler(mockTemplate);
+    const neither = new Battler(mockTemplate);
     new BattleController([ ally ], [ foe ]);
 
     expect(ally.getSide()).toBe('allies');

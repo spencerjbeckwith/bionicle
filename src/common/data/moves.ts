@@ -6,11 +6,14 @@ interface SpecialMoveList {
     // New moves here
 }
 
-interface SpecialMove {
-    name: string;
-    description: string;
-    cost: number;
-    use: (bearer: Battler, target: Battler | Battler[] | null) => Promise<void>;
+class SpecialMove {
+    constructor(
+        public name: string, 
+        public description: string, 
+        public cost: number, 
+        public requireTarget: boolean, 
+        public use: (bearer: Battler, target: Battler | null, instantaneous?: boolean) => Promise<void>
+    ) {}
 }
 
 interface LevelUpMove {
@@ -19,19 +22,20 @@ interface LevelUpMove {
 }
 
 const specialMoves : SpecialMoveList = {
-    flare: {
-        name: 'Flare',
-        description: 'Attack a foe with fire.',
-        cost: 1,
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
+    flare: new SpecialMove(
+        'Flare',
+        'Attack a foe with fire.',
+        1,
+        true,
+        function(bearer: Battler, target: Battler | null, instantaneous = false) {
             return new Promise((resolve, reject) => {
 
                 // ...
 
                 resolve();
             });
-        }
-    }
+        }),
+    
     // New moves here
 }
 

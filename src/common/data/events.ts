@@ -47,14 +47,14 @@ class BattlerEndRoundEvent extends BattlerEvent {
 
 /** Fires immediately before any HP or nova damage is dealt to this Battler. */
 class BattlerDamageEvent extends BattlerEvent {
-    constructor(battler: Battler, public amount: number, public stat: 'hp' | 'nova' = 'hp', public source: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack', instantaneous = false) {
+    constructor(battler: Battler, public amount: number, public stat: 'hp' | 'nova' = 'hp', public cause: Action | null, instantaneous = false) {
         super('damage', battler, instantaneous);
     }
 }
 
 /** Fires immediately before any HP or nova is restored to this Battler. */
 class BattlerHealEvent extends BattlerEvent {
-    constructor(battler: Battler, public amount: number, public stat: 'hp' | 'nova' = 'hp', public source: 'special' | 'item' | 'status' | 'mask' = 'item', instantaneous = false) {
+    constructor(battler: Battler, public amount: number, public stat: 'hp' | 'nova' = 'hp', public cause: Action | null, instantaneous = false) {
         super('heal', battler, instantaneous);
     }
 }
@@ -75,7 +75,7 @@ class BattlerStatusRemovedEvent extends BattlerEvent {
 
 /** Fires before sustained HP damage causes this Battler to be KOed, but after the damage is dealt. */
 class BattlerKnockOutEvent extends BattlerEvent {
-    constructor(battler: Battler, public cause: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack', instantaneous = false) {
+    constructor(battler: Battler, public cause: Action | null, instantaneous = false) {
         super('knockOut', battler, instantaneous);
     }
 }

@@ -326,9 +326,9 @@ class Battler extends PromisedEventTarget {
     }
 
     /** Damages this Battler's HP or nova by a certain amount. */
-    damage(amount: number, stat: 'hp' | 'nova' = 'hp', source: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack', instantaneous = false): Promise<void> {
+    damage(amount: number, stat: 'hp' | 'nova' = 'hp', cause: Action | null = null, instantaneous = false): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            this.dispatchPromisedEvent<BattlerDamageEvent>(new BattlerDamageEvent(this, amount, stat, source, instantaneous)).then((event) => {
+            this.dispatchPromisedEvent<BattlerDamageEvent>(new BattlerDamageEvent(this, amount, stat, cause, instantaneous)).then((event) => {
                 event.amount = Math.round(event.amount);
                 if (stat === 'hp') {
                     this.stats.hp -= event.amount;
@@ -337,7 +337,7 @@ class Battler extends PromisedEventTarget {
                         this.stats.hp = 0;
 
                         // effect promise chain here?
-                        this.knockOut(source).then(() => {
+                        this.knockOut(cause).then(() => {
                             resolve();
                         });
                     } else {
@@ -364,9 +364,9 @@ class Battler extends PromisedEventTarget {
     }
 
     /** Restores this Battler's HP or nova by a certain amount. */
-    heal(amount: number, stat: 'hp' | 'nova' = 'hp', source: 'special' | 'item' | 'status' | 'mask' = 'item', instantaneous = false): Promise<void> {
+    heal(amount: number, stat: 'hp' | 'nova' = 'hp', cause: Action | null = null, instantaneous = false): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            this.dispatchPromisedEvent(new BattlerHealEvent(this, amount, stat, source, instantaneous)).then((event) => {
+            this.dispatchPromisedEvent(new BattlerHealEvent(this, amount, stat, cause, instantaneous)).then((event) => {
                 event.amount = Math.round(event.amount);
                 if (stat === 'hp') {
                     this.stats.hp += event.amount;
@@ -393,7 +393,7 @@ class Battler extends PromisedEventTarget {
     }
 
     /** KOs the Battler. */
-    knockOut(cause: 'attack' | 'special' | 'item' | 'status' | 'mask' = 'attack', instantaneous = false): Promise<void> {
+    knockOut(cause: Action | null = null, instantaneous = false): Promise<void> {
         return new Promise((resolve,reject) => {
             this.dispatchPromisedEvent(new BattlerKnockOutEvent(this, cause, instantaneous)).then((event) => {
                 this.isKOed = true;

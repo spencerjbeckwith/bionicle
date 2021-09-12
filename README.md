@@ -218,9 +218,23 @@ So to start a battle, ```startRound()``` is all that needs to be called and it w
 
 # To-do
 
-- Implement Actions
+- Extract special action into a static Battler.dispatchMultipleEventTriads() method
+- Implement item actions - using above static method
+    - Write tests
+- Implement mask actions - ditto
+    - Write tests
+- Implement protect actions
+    - Write tests
+- Extract formulas for damage into their own module - rather than littering them through the code
+
+- At what point do Battler's spend their nova to use a special move?
+
 - Write a test for BattleController.startRound()
+- Implement Battler.getAllActions()
+
 - Should BattleController dispatch any events? Does it need to extend the PromisedEventTarget at all?
+- Standardize errors thrown by rejected promises
+- Begin working on client and adding animations to Actions/turns - making them non-instantaneous
 - Where does randomness come from when executing actions? Netcode-wise...
     - BattleController's startRound() should only be called server-side:
         - determineAction, on server-side Battler instances, should await a valid network response

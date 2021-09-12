@@ -1,41 +1,8 @@
-import { BattlerTemplate } from '../data/battlerTemplate';
 import { BattlerBeginTurnEvent, BattlerEndTurnEvent } from '../data/events';
 import { Action } from './actions';
 import BattleController from './battleController';
 import Battler from './battler';
-
-const mockTemplate: BattlerTemplate = {
-    accessory: null,
-    description: '',
-    dropMoney: 0,
-    dropXP: 0,
-    elements: [],
-    equipment: null,
-    immunities: [],
-    inventory: [],
-    masks: [],
-    moves: [],
-    name: '',
-    palette: 0,
-    sprite: null,
-    stats: {
-        accuracy: 100,
-        attack: 10,
-        critical: 0,
-        defense: 0,
-        elAttack: 0,
-        elDefense: 0,
-        evasion: 0,
-        hp: 1,
-        level: 0,
-        maxHP: 1,
-        maxNova: 1,
-        nova: 1,
-        speed: 5,
-        xp: 0,
-    },
-    weapon: null,
-}
+import mockTemplate from './mocks/mockTemplate';
 
 test('getTurnOrder() orders battler turns correctly',() => {
     const bc = new BattleController([

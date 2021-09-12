@@ -59,10 +59,10 @@ class BattleController extends PromisedEventTarget {
         });
     }
 
-    /** Returns an array of Battlers from this BattleControllers's allies and foes lists, ordered according to when their turn order. This is determined by the speed stat. Toa win ties and KOed battlers don't get a turn, and so aren't present. */
-    getTurnOrder(): Battler[] {
+    /** Returns an array of Battlers, ordered according to when their turn order. This is determined by the speed stat. Toa win ties and KOed battlers don't get a turn, and so aren't present. */
+    getTurnOrder(battlers: Battler[] = [ ...this.allies, ...this.foes] ): Battler[] {
         // Determine order
-        const turnOrder = ([ ...this.allies, ...this.foes ]).filter((b: Battler) => {
+        const turnOrder = (battlers).filter((b: Battler) => {
             // Filter out battlers who cannot take a turn, like those that are dead
             if (b.isKOed) {
                 return false;
