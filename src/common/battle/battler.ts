@@ -1,7 +1,7 @@
 import BattleController from './battleController';
 import StatCollection from '../data/stats';
 import { BattlerTemplate } from '../data/battlerTemplate';
-import { BattlerBeginTurnEvent, BattlerEndTurnEvent, BattlerBeginRoundEvent, BattlerEndRoundEvent, BattlerDamageEvent, BattlerKnockOutEvent, BattlerEventTypes, BattlerHealEvent, BattlerStatusAppliedEvent, BattlerStatusRemovedEvent, BattlerEvent } from '../data/events';
+import { BattlerBeginTurnEvent, BattlerEndTurnEvent, BattlerBeginRoundEvent, BattlerEndRoundEvent, BattlerDamageEvent, BattlerKnockOutEvent, BattlerEventTypes, BattlerHealEvent, BattlerStatusAppliedEvent, BattlerStatusRemovedEvent, BattlerEvent, BattlerBeforeAffectedEvent, BattlerReviveEvent } from '../data/events';
 import { Action } from './actions';
 import { Weapon } from '../data/inventory/weapons';
 import { Equipment } from '../data/inventory/equipment';
@@ -115,6 +115,64 @@ class Battler extends PromisedEventTarget {
         });
     }
 
+    /** Dispatches event triads for a variety of Battlers. The before events will all be fired, then the executors called, and then all after events fired. "execute" is an array of functions that must each return a Promise. */
+    static dispatchMultipleEventTriads<ev1, ev2>(battlers: Battler[], before: (ev1 & BattlerEvent)[], after: (ev2 & BattlerEvent)[], execute: Promise<void>[]): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            if (battlers.length === 0) {
+                // If no battlers are to be affected, resolve immediately
+                console.warn('Attempted to dispatch multiple triads on empty Battler array!');
+                return resolve();
+            }
+
+            if (battlers.length !== before.length || battlers.length !== after.length || battlers.length !== execute.length) {
+                console.error(`Failed to dispatch multiple event triads! Array length mismatch: battlers ${battlers.length}, before ${before.length}, after ${after.length}, execute ${execute.length}`);
+                return reject();
+            }
+
+            let beforePromise = battlers[0].dispatchPromisedEvent(before[0]);
+            for (let b = 1; b < battlers.length; b++) {
+                // Chain more events on
+                beforePromise = beforePromise.then(() => {
+                    return battlers[b].dispatchPromisedEvent(before[b]);
+                });
+            }
+
+            beforePromise.then(() => {
+                // All before affected events done - run the move's effect on each battler
+                let middlePromise = execute[0];
+                for (let b = 1; b < battlers.length; b++) {
+                    // Chain more uses
+                    middlePromise = middlePromise.then(() => execute[b]);
+                }
+
+                middlePromise.then(() => {
+                    // All uses done - fire the BattlerAfterAffectEvents
+
+                    let afterPromise = battlers[0].dispatchPromisedEvent(after[0]);
+                    for (let b = 1; b < battlers.length; b++) {
+                        afterPromise = afterPromise.then(() => {
+                            return battlers[b].dispatchPromisedEvent(after[b]);
+                        });
+                    }
+
+                    afterPromise.then(() => {
+                        // ALL DONE! Sheesh, finally.
+                        resolve();
+                    }).catch((err) => {
+                        // afterPromise rejected promise rejected
+                        reject(err);
+                    });
+                }).catch((err) => {
+                    // execute method rejected
+                    reject(err);
+                });
+            }).catch((err) => {
+                // beforePromise promise rejected
+                reject(err);
+            });
+        });
+    }
+
     /** Executes an action. The action must have this Battler as its executor. This also fires the BattlerBeginTurnEvent before the action, and the BattlerAfterTurnEvent after the action. Returns a promise which resolves to the initial action after all events have fired. */
     doTurn(action: Action, instantaneous = false): Promise<Action> {
         return new Promise((resolve, reject) => {
@@ -123,7 +181,7 @@ class Battler extends PromisedEventTarget {
                 reject(`Battler ${this.template.name}: Battler-action mismatch!`);
             } else {
                 this.dispatchEventTriad(new BattlerBeginTurnEvent(this, action, instantaneous), new BattlerEndTurnEvent( this, action, instantaneous), (firstEvent) => {
-                    return firstEvent.action.execute(this.bc);
+                    return firstEvent.action.execute();
                 }).then((secondEvent) => {
                     resolve(secondEvent.action);
                 }).catch((err) => {
@@ -396,25 +454,59 @@ class Battler extends PromisedEventTarget {
     knockOut(cause: Action | null = null, instantaneous = false): Promise<void> {
         return new Promise((resolve,reject) => {
             this.dispatchPromisedEvent(new BattlerKnockOutEvent(this, cause, instantaneous)).then((event) => {
+                // Remove all our listeners and set our KO flag - don't remove all listeners, though
+                this.removeAllStatuses(true);
                 this.isKOed = true;
-                if (this.isToa) {
-                    // Don't die for real - just KO
 
-                    // effect promise chain here?
-                    resolve();
+                if (this.isToa || this.template.surviveKO) {
+                    // Don't die for real - just KO
+                    if (instantaneous) {
+                        resolve();
+                    } else {
+
+                        // effect promise chain here?
+
+                        resolve();
+                    }
                 } else {
                     // Die for real
-
                     // call to BattleController to remove us from the battle?
+                    if (instantaneous) {
+                        resolve();
+                    } else {
+                        
+                        // effect promise chain here?
 
-                    // effect promise chain here?
-                    resolve();
+                        resolve();
+                    }
                 }
             }).catch((err) => {
                 console.error(`Battler ${this.template.name}: Rejected KO event!`);
                 reject(err);
             });
         });
+    }
+
+    /** Revives the Battler. */
+    revive(newHP: number, cause: Action | null = null, instantaneous = false): Promise<void> {
+        return new Promise((resolve, reject) => {
+            // Unlike KO event, restore us first and then fire the event
+            this.stats.hp = Math.min(this.stats.maxHP, Math.round(newHP));
+            this.isKOed = false;
+            this.dispatchPromisedEvent(new BattlerReviveEvent(this, cause, instantaneous)).then((event) => {
+                if (instantaneous) {
+                    resolve();
+                } else {
+
+                    // effect promise chain here?
+
+                    resolve();
+                }
+            }).catch((err) => {
+                console.error(`Battler ${this.template.name}: Rejected revive event!`);
+                reject(err);
+            });
+        })
     }
 
     /** Returns what side in a battle we belong to. Return "allies", "foes", or false if this Battler is neither... somehow. */
@@ -429,6 +521,8 @@ class Battler extends PromisedEventTarget {
         return false;
     }
 
+    // TO-DO:
+
     determineAction(bc: BattleController, instantaneous = false): Promise<Action> {
         if (!this.bc || this.bc.battleOver) {
             // Set controller if it hasn't been set yet
@@ -436,13 +530,13 @@ class Battler extends PromisedEventTarget {
         }
         return new Promise((resolve, reject) => {
 
+            // If instantaneous OR not the local player while playing locally, use AI to evaluate best action
+
             // If the local player, open HUD and allow for action selection
 
             // If not the local player and playing online, wait for an online action response
 
-            // If not the local player and playing locally, use AI to evaluate best action
-
-            resolve(new Action('attack',this,null));
+            resolve(new Action('attack',this,this));
 
         });
     }

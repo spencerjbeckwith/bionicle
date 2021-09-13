@@ -1,4 +1,4 @@
-import { BattlerEndRoundEvent, BattlerDamageEvent, BattlerKnockOutEvent, BattlerBeginTurnEvent, BattlerEndTurnEvent } from '../data/events';
+import { BattlerEndRoundEvent, BattlerDamageEvent, BattlerKnockOutEvent, BattlerBeginTurnEvent, BattlerEndTurnEvent, BattlerBeforeAffectedEvent, BattlerAfterAffectedEvent, BattlerReviveEvent } from '../data/events';
 import { Accessory } from '../data/inventory/accessories';
 import { Equipment } from '../data/inventory/equipment';
 import { Weapon } from '../data/inventory/weapons';
@@ -8,7 +8,6 @@ import { Action } from './actions';
 import BattleController from './battleController';
 import Battler from './battler';
 import mockTemplate from './mocks/mockTemplate';
-
 
 test('status effects applied/removed',async () => {
     const mockStatus: StatusEffect = {
@@ -85,13 +84,7 @@ test('weapon, equipment, accessory, and mask equipping',() => {
         deinit: jest.fn(),
     }
 
-    const mockMask: Mask = {
-        image: 0,
-        name: '',
-        use: jest.fn(),
-        init: jest.fn(),
-        deinit: jest.fn(),
-    }
+    const mockMask = new Mask('','',0,true,jest.fn(),jest.fn(),jest.fn());
 
     // Equip and remove a weapon
     const mock = new Battler(mockTemplate);
@@ -205,10 +198,29 @@ test('too much damage will KO', async () => {
         });
     });
 
-    await mock.damage(1000);
+    await mock.damage(1000,undefined,null,true);
 
     expect(mock.stats.hp).toBe(0);
     expect(mock.isKOed).toBe(true);
+    expect(eventMock).toBeCalled();
+});
+
+test('can be revived', async () => {
+    const mock = new Battler(mockTemplate);
+    const eventMock = jest.fn();
+
+    mock.addPromisedEventListener('revive',(event: BattlerReviveEvent) => {
+        return new Promise<BattlerKnockOutEvent>((resolve, reject) => {
+            eventMock();
+            resolve(event);
+        });
+    });
+
+    await mock.damage(10000);
+    await mock.revive(2,null,true);
+
+    expect(mock.stats.hp).toBe(2);
+    expect(mock.isKOed).toBe(false);
     expect(eventMock).toBeCalled();
 });
 
@@ -233,7 +245,7 @@ test('doTurn() executes BattlerBeginTurnEvent, the action, and BattlerEndTurnEve
     });
 
     // Override our action's default execute function
-    action.execute = (bc: BattleController) => {
+    action.execute = () => {
         return new Promise((resolve, reject) => {
             mockFn();
             resolve();
@@ -254,7 +266,7 @@ test('BattlerBeginTurnEvent and BattlerEndTurnEvent can mutate the doTurn() acti
     // Add our events
     battler.addPromisedEventListener<BattlerBeginTurnEvent>('beginTurn',(event) => {
         return new Promise<BattlerBeginTurnEvent>((resolve, reject) => {
-            event.action.type = 'item';
+            event.action.type = 'use';
             mockFn();
             resolve(event);
         });
@@ -269,7 +281,7 @@ test('BattlerBeginTurnEvent and BattlerEndTurnEvent can mutate the doTurn() acti
     });
 
     // Override our action's default execute function
-    action.execute = (bc: BattleController) => {
+    action.execute = () => {
         return new Promise((resolve, rjeect) => {
             mockFn();
             resolve();
@@ -278,7 +290,7 @@ test('BattlerBeginTurnEvent and BattlerEndTurnEvent can mutate the doTurn() acti
     
     await battler.doTurn(action);
 
-    expect(action.type).toBe('item');
+    expect(action.type).toBe('use');
     expect(action.target).toBe(battler2);
     expect(mockFn).toBeCalledTimes(3);
 });
@@ -292,4 +304,66 @@ test('getSide() returns correctly',() => {
     expect(ally.getSide()).toBe('allies');
     expect(foe.getSide()).toBe('foes');
     expect(neither.getSide()).toBe(false);
+});
+
+test('dispatchMultipleEventTriads() executes all in order',async () => {
+    const battlers = [ new Battler(mockTemplate), new Battler(mockTemplate), new Battler(mockTemplate) ];
+    const actions = [
+        new Action('attack', battlers[0], battlers[0]),
+        new Action('attack', battlers[1], battlers[1]),
+        new Action('attack', battlers[2], battlers[2]),
+    ];
+
+    const beforeEvents = [
+        new BattlerBeforeAffectedEvent(battlers[0], actions[0], true),
+        new BattlerBeforeAffectedEvent(battlers[1], actions[1], true),
+        new BattlerBeforeAffectedEvent(battlers[2], actions[2], true),
+    ];
+
+    const executeMockFn = jest.fn();
+    const executeFn = () => {
+        return new Promise<void>((resolve, reject) => {
+            executeMockFn();
+            resolve();
+        });
+    }
+
+    const execute = [ executeFn(), executeFn(), executeFn() ];
+    const afterEvents = [
+        new BattlerAfterAffectedEvent(battlers[0], actions[0], true),
+        new BattlerAfterAffectedEvent(battlers[1], actions[1], true),
+        new BattlerAfterAffectedEvent(battlers[2], actions[2], true),
+    ];
+
+    // Add events to our battlers to build an array in order
+    const array = [];
+    const beforeMockFn = jest.fn();
+    const afterMockFn = jest.fn();
+    for (let i = 0; i <= 2; i++) {
+        battlers[i].addPromisedEventListener('beforeAffected', (ev: BattlerBeforeAffectedEvent) => {
+            return new Promise<BattlerBeforeAffectedEvent>((resolve, reject) => {
+                array.push(i);
+                beforeMockFn();
+                resolve(ev);
+            });
+        });
+
+        battlers[i].addPromisedEventListener('afterAffected', (ev: BattlerAfterAffectedEvent) => {
+            return new Promise<BattlerAfterAffectedEvent>((resolve, reject) => {
+                array.push(i+3);
+                afterMockFn();
+                resolve(ev);
+            });
+        });
+    }
+    
+    await Battler.dispatchMultipleEventTriads(battlers, beforeEvents, afterEvents, execute);
+
+    // Ensure the executors were called and the events called in order
+    expect(executeMockFn).toBeCalledTimes(3);
+    expect(beforeMockFn).toBeCalledTimes(3);
+    expect(afterMockFn).toBeCalledTimes(3);
+    expect(array).toMatchObject([
+        0, 1, 2, 3, 4, 5
+    ]);
 });

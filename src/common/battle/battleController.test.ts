@@ -80,7 +80,7 @@ test('doActions() resolves after all promises execute',async () => {
     const bc = new BattleController([],[]);
     const mockFn = jest.fn();
     const mockAction = new Action('attack',battler,null);
-    mockAction.execute = (bc: BattleController) => { // Passthrough action execution
+    mockAction.execute = () => { // Passthrough action execution
         return new Promise((resolve, reject) => {
             mockFn();
             resolve();
@@ -109,7 +109,7 @@ test('doActions() fires every BattlerBeginTurn and BattlerEndTurn event', async 
 
     // Set up mocks
     const mockFn = jest.fn();
-    const mockActionExecute = (bc: BattleController) => {
+    const mockActionExecute = () => {
         return new Promise<void>((resolve, reject) => {
             mockFn();
             resolve();

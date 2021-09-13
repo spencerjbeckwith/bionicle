@@ -64,6 +64,11 @@ class PromisedEventTarget {
         });
     }
 
+    /** Removes all listeners of all PromiseEvent types. */
+    removeAllPromisedEventListeners() {
+        this.listeners = {};
+    }
+
     /** Activates a PromisedEvent and executes our chain of promises. Use .then, .catch, or .finally calls on this method to continue working after all the promises are done. */
     dispatchPromisedEvent<ev>(event: ev & PromisedEvent): Promise<ev> {
         const type = event.type.toLowerCase();

@@ -42,8 +42,8 @@ Toa Equipment:
 - Masks
     - The key point of the game, each providing a passive effect and an active effect when used in battle.
     Hau - the mask of shielding
-        Passive: increases defense
-        Active: Greatly reduce incoming damage for several turns
+        Passive: increases defense and elemental defense
+        Active: Protect: boost defense and elemental defense. When an ally is targeted by an attack or effect this turn, you take the damage instead
     Kakama - the mask of speed
         Passive: increases speed, enables quick-travel at certain locations
         Active: Greatly increase speed for several turns
@@ -136,7 +136,7 @@ This system of init/deinit is also reflected in the file structure: the "battle"
 
 The main difference between the PromisedEventTargets and regular EventTargets is that PromisedEventTargets listeners must return promises - these are all evaluated in order and wait for one another to complete before moving on. This should make it easy for sequential battle events to occur, as opposed to everything at once.
 
-Some things have a "use" method, in addition to or in place of init/deinit. These indicate items or masks that can be used in a battle. Use is pretty simple - it is called when a Battler uses it and must be provided a user and target(s). For example, when you have a mask it provides a passive or conditional effect - applied via init/deinit - and when it is activated in battle, the use method is called.
+Some things have a "use" method, in addition to or in place of init/deinit. They extend the "Usable" class. These indicate items or masks that can be used in a battle. Use is pretty simple - it is called when a Battler uses it and must be provided a user and target(s). For example, when you have a mask it provides a passive or conditional effect - applied via init/deinit - and when it is activated in battle, the use method is called.
 
 ## Actions
 
@@ -186,7 +186,7 @@ For example: an accessory has an effect every time you attack with it. The acces
 
 Note that **you should not use ```async/await``` for these events except for in testing.** This is because ```async/await``` will make everything pause until the promise resolves, which is impossible if things are paused as most PromisedEvents depend, under normal circumstances, on any number of future animation frames. If execution pauses, the frames will not happen naturally and so the promises will, unintuitively, never resolve. However, ```async/await``` are incredibly useful in a testing situation as you won't need to chain ```.then``` every time you want to use a promise. You can also set the ```instantaneous``` flag of PromisedEvents to resolve them and their effects immediately - just make sure you implement support for ```instantaneous``` every time you add events to a PromisedEventTarget. But even instantaneous promises wait for a full JavaScript loop to complete before resolving, so you'll still need either ```.then``` or ```async/await```.
 
-**Also note that all PromisedEvent listeners must return a promise of their own and resolve to an event instance.** To resolve events of different types, you may need to call and use their promises and then ```resolve()``` your outer promise in the ```.then()``` call of the different event. These promises resolve to the event, that way you can mutate the event through different listeners - such as changing the damage of an attack or the turns of an applied status.
+**Also note that all PromisedEvent listeners must return a promise of their own and resolve to an event instance.** To resolve events of different types, you may need to call and use their promises and then ```resolve()``` your outer promise in the ```.then()``` call of the different event. These promises resolve to the event, that way you can mutate the event through different listeners - such as changing the damage of an attack or the turns of an applied status. If you're doing it wrong, TypeScript will probably complain at you.
 
 ### Writing PromisedEvent Promises/Listeners
 
@@ -218,18 +218,17 @@ So to start a battle, ```startRound()``` is all that needs to be called and it w
 
 # To-do
 
-- Extract special action into a static Battler.dispatchMultipleEventTriads() method
-- Implement item actions - using above static method
-    - Write tests
-- Implement mask actions - ditto
-    - Write tests
-- Implement protect actions
-    - Write tests
-- Extract formulas for damage into their own module - rather than littering them through the code
+- Make elemental damage formula, including multipliers and immunities
+    - Add elemental damage to physical attacks
+
+- Can masks get knocked off? Maybe make it a status condition?
 
 - At what point do Battler's spend their nova to use a special move?
+- Similarly, at what point do Battler's items get removed from their inventory?
+    - Implement into Action.execute.
 
 - Write a test for BattleController.startRound()
+
 - Implement Battler.getAllActions()
 
 - Should BattleController dispatch any events? Does it need to extend the PromisedEventTarget at all?

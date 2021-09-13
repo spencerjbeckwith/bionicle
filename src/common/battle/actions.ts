@@ -1,21 +1,32 @@
 import { BattlerAfterAffectedEvent, BattlerBeforeAffectedEvent } from '../data/events';
-import { UsableItem } from '../data/inventory/items';
-import { Mask } from '../data/masks';
-import { SpecialMove } from '../data/moves';
-import BattleController from './battleController';
+import Formulas from '../data/formulas';
+import { Usable, UsableItem } from '../data/inventory/items';
 import Battler from './battler';
 
-type ActionType = 'attack' | 'special' | 'item' | 'mask' | 'protect'; // New action types here
-type ActionDataType = number | SpecialMove | UsableItem | Mask | null;
+type ActionType = 'attack' | 'use'; // New action types here
 
 /** Represents what a Battler is going to do on any turn. */
 class Action {
+    /** Calculated and set by 'attack' actions */
     damage?: number;
 
     /** Array of Math.random results, to ensure the Action will have the same random result on multiple game instances. BE CAREFUL TO KEEP THIS FRESH, and always set to the server's values when online.*/
     randoms: [ number, number, number, number ];
 
-    constructor(public type: ActionType, public executor: Battler, public target: Battler | Battler[] | null, public data?: ActionDataType | null, public instantaneous = false) {
+    constructor(
+        /** The type of action to execute. Determines what behavior occurs when action.execute() is called. */
+        public type: ActionType,
+
+        /** The Battler who is doing this action. */
+        public executor: Battler,
+
+        /** The Battler for single-target actions, an array of Battlers for multi-target actions, or null for no-target actions. */
+        public target: Battler | Battler[] | null,
+
+        /** Only used by 'use' actions - represents whatever thing was used, rather its a SpecialMove, Mask, etc. */
+        public thingUsed?: Usable | null,
+
+        public instantaneous = false) {
         this.randoms = [
             Math.random(),
             Math.random(),
@@ -25,7 +36,7 @@ class Action {
     }
 
     /** Returns a promise that resolves when the Action is fulfilled/after all effects and animations, or rejects if there is a problem with the Action such as an invalid type. */
-    execute(bc: BattleController): Promise<void> {
+    execute(): Promise<void> {
         return new Promise((resolve, reject) => {
             switch (this.type) {
                 case ('attack'): {
@@ -40,7 +51,7 @@ class Action {
                     }
 
                     const damageConstant = 100;
-                    this.damage = Math.max( 1, Math.round(this.executor.stats.attack * ( damageConstant / (damageConstant + this.target.stats.defense))));
+                    this.damage = Formulas.calculateDamage(this.executor.stats.attack, this.target.stats.defense);
 
                         // apply changes to state and immediately resolve
                     this.target.dispatchEventTriad(
@@ -63,9 +74,9 @@ class Action {
                     break;
                 }
 
-                case ('special'): {
-                    if (!(this.data instanceof SpecialMove)) {
-                        reject('On action type special, action.data must be a SpecialMove instance!');
+                case ('use'): {
+                    if (!(this.thingUsed instanceof Usable)) {
+                        reject('On action type use, action.data must be a Usable instance!');
                         break;
                     }
 
@@ -76,110 +87,54 @@ class Action {
                             new BattlerAfterAffectedEvent(this.target, this, this.instantaneous),
                             (event) => {
                                 // Do the effect of the move and return its promise - be sure to pass in our instantaneous-ness
-                                return (this.data as SpecialMove).use(this.executor, this.target as Battler, this.instantaneous);
+                                return this.thingUsed.use(this.executor, this.target as Battler, this.instantaneous);
                             }
                         ).then(() => {
                             resolve(); // Done!
                         }).catch((err) => {
+                            // Problem on move use on single target
                             reject(err);
                         });
                     } else if (this.target instanceof Array) {
-                        // Multiple targets - fire all before affected events on all targets, call the move on all targets, then fire all after affected events on all targets
+                        // Multiple targets - dispatch multiple triads
                         if (this.target.length === 0) {
-                            reject('Special moves must have a target!');
+                            reject('Use actions, provided an array of targets, must have at least one!');
                             break;
                         }
 
-                        let beforeAffectPromise = this.target[0].dispatchPromisedEvent(new BattlerBeforeAffectedEvent(this.target[0], this, this.instantaneous));
-                        for (let b = 1; b < this.target.length; b++) {
-                            // Chain more events on
-                            beforeAffectPromise = beforeAffectPromise.then((event) => {
-                                return this.target[b].dispatchPromisedEvent(new BattlerBeforeAffectedEvent(this.target[b], this, this.instantaneous));
-                            });
-                        }
+                        const beforeEvents = this.target.map((battler) => {
+                            // Get array of before affected events
+                            return new BattlerBeforeAffectedEvent(battler, this, this.instantaneous);
+                        });
 
-                        beforeAffectPromise.then(() => {
-                            // All before affected events done - run the move's effect on each battler
+                        const afterEvents = this.target.map((battler) => {
+                            // Get array of after affected events
+                            return new BattlerAfterAffectedEvent(battler, this, this.instantaneous);
+                        });
 
-                            let movePromise = (this.data as SpecialMove).use(this.executor, this.target[0], this.instantaneous);
-                            for (let b = 1; b < (this.target as Battler[]).length; b++) {
-                                // Chain more uses
-                                movePromise = movePromise.then(() => {
-                                    return (this.data as SpecialMove).use(this.executor, this.target[b], this.instantaneous);
-                                });
-                            }
+                        const executors = this.target.map((battler) => {
+                            // Get array of execute fns
+                            return this.thingUsed.use(this.executor, battler, this.instantaneous);
+                        });
 
-                            movePromise.then(() => {
-                                // All uses done - fire the BattlerAfterAffectEvents
-
-                                let afterAffectPromise = this.target[0].dispatchPromisedEvent(new BattlerAfterAffectedEvent(this.target[0], this, this.instantaneous));
-                                for (let b = 1; b < (this.target as Battler[]).length; b++) {
-                                    afterAffectPromise = afterAffectPromise.then(() => {
-                                        return this.target[b].dispatchPromisedEvent(new BattlerAfterAffectedEvent(this.target[b], this, this.instantaneous));
-                                    });
-                                }
-
-                                afterAffectPromise.then(() => {
-                                    // ALL DONE! Sheesh, finally.
-                                    resolve();
-                                }).catch((err) => {
-                                    // BattlerAfterAffectedEvent promise rejected
-                                    reject(err);
-                                });
-                            }).catch((err) => {
-                                // SpecialMove use method rejected
-                                reject(err);
-                            });
+                        Battler.dispatchMultipleEventTriads(this.target, beforeEvents, afterEvents, executors).then(() => {
+                            resolve(); // Done!
                         }).catch((err) => {
-                            // BattlerBeforeAffectedEvent promise rejected
+                            // Problem dispatching specialmove triad multiples
                             reject(err);
                         });
-                    } else if (!this.data.requireTarget) {
-                        // Moves that don't require a target: just call use right away, no need to fire any targets' events
-                        this.data.use(this.executor, null, this.instantaneous).then(() => {
+                    } else if (!this.thingUsed.requireTarget) {
+                        // Uses that don't require a target: just call use right away, no need to fire any targets' events
+                        this.thingUsed.use(this.executor, null, this.instantaneous).then(() => {
                             resolve();
                         }).catch((err) => {
-                            reject();
+                            reject(err);
                         });
-                        break;
                     } else {
                         // All other moves: no target on a move that requires one?
-                        reject(`Move ${this.data.name} requires a target!`);
+                        reject(`This use action requires a target!`);
                     }
 
-                    break;
-                }
-
-                case ('item'): {
-                    if (this.instantaneous) {
-                        // ...
-                        resolve();
-                    } else {
-                        // ...
-                        resolve();
-                    }
-                    break;
-                }
-
-                case ('mask'): {
-                    if (this.instantaneous) {
-                        // ...
-                        resolve();
-                    } else {
-                        // ...
-                        resolve();
-                    }
-                    break;
-                }
-
-                case ('protect'): {
-                    if (this.instantaneous) {
-                        // ...
-                        resolve();
-                    } else {
-                        // ...
-                        resolve();
-                    }
                     break;
                 }
 

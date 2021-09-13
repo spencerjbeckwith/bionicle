@@ -33,6 +33,10 @@ interface BattlerTemplate {
     stats: StatCollection;
     immunities: StatusEffect[];
 
+    // Optional flags:
+    /** If true, non-Toa of this template will not be removed immediately on KO, leaving them to be potentially revived. */
+    surviveKO?: boolean;
+
     weapon: Weapon | null;
     equipment: Equipment | null;
     accessory: Accessory | null;
@@ -75,6 +79,7 @@ const battlerTemplates : BattlerTemplateList = {
         weapon: null,
         equipment: null,
         accessory: null,
+        surviveKO: false,
         inventory: [],
     },
 

@@ -1,5 +1,6 @@
 import Battler from '../battle/battler';
 import deepfreeze from 'deepfreeze';
+import { EquipItem, Equippable, Usable, UseFunction } from './inventory/items';
 
 interface MaskList {
     hau: Mask;
@@ -8,253 +9,110 @@ interface MaskList {
     akaku: Mask;
     miru: Mask;
     kaukau: Mask;
-    huna: Mask;
-    komau: Mask;
-    ruru: Mask;
-    matatu: Mask;
-    mahiki: Mask;
-    rau: Mask;
+    // huna: Mask;
+    // komau: Mask;
+    // ruru: Mask;
+    // matatu: Mask;
+    // mahiki: Mask;
+    // rau: Mask;
 
     // New masks here
 }
 
-interface Mask {
-    name: string;
-    image: number;
-
-    init: (bearer: Battler) => void;
-    deinit: ( bearer: Battler) => void;
-    use: (bearer: Battler, target: Battler | Battler[] | null) => Promise<void>;
+class Mask extends Usable implements Equippable {
+    constructor(
+        public readonly name: string,
+        public readonly description: string,
+        public readonly image: number,
+        requireTarget: boolean,
+        public readonly init: (bearer: Battler) => void,
+        public readonly deinit: (bearer: Battler) => void,
+        use: UseFunction,
+    ) {
+        super(requireTarget, use);
+    }
 }
 
 const masks : MaskList = {
-    hau: {
-        name: 'Hau',
-        image: 0,
-        init: function(bearer: Battler) {
+    hau: new Mask('Hau','',0,true,function(bearer: Battler) {
+
+    },function(bearer: Battler) {
+
+    },function(bearer: Battler, target: Battler | null, instantaneous = false) {
+        return new Promise((resolve, reject) => {
+
             // ...
-        },
-        deinit: function(bearer: Battler) {
+
+            resolve();
+        })
+    }),
+
+    kakama: new Mask('Kakama','',0,true,function(bearer: Battler) {
+
+    },function(bearer: Battler) {
+
+    },function(bearer: Battler, target: Battler | null, instantaneous = false) {
+        return new Promise((resolve, reject) => {
+
             // ...
-        },
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
-            return new Promise((resolve, reject) => {
 
-                // ...
+            resolve();
+        })
+    }),
 
-                resolve();
-            });
-        },
-    },
+    pakari: new Mask('Pakari','',0,true,function(bearer: Battler) {
 
-    kakama: {
-        name: 'Kakama',
-        image: 1,
-        init: function(bearer: Battler) {
+    },function(bearer: Battler) {
+
+    },function(bearer: Battler, target: Battler | null, instantaneous = false) {
+        return new Promise((resolve, reject) => {
+
             // ...
-        },
-        deinit: function(bearer: Battler) {
+
+            resolve();
+        })
+    }),
+
+    akaku: new Mask('Akaku','',0,true,function(bearer: Battler) {
+
+    },function(bearer: Battler) {
+
+    },function(bearer: Battler, target: Battler | null, instantaneous = false) {
+        return new Promise((resolve, reject) => {
+
             // ...
-        },
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
-            return new Promise((resolve, reject) => {
 
-                // ...
+            resolve();
+        })
+    }),
 
-                resolve();
-            });
-        },
-    },
+    miru: new Mask('Miru','',0,true,function(bearer: Battler) {
 
-    pakari: {
-        name: 'Pakari',
-        image: 2,
-        init: function(bearer: Battler) {
+    },function(bearer: Battler) {
+
+    },function(bearer: Battler, target: Battler | null, instantaneous = false) {
+        return new Promise((resolve, reject) => {
+
             // ...
-        },
-        deinit: function(bearer: Battler) {
+
+            resolve();
+        })
+    }),
+
+    kaukau: new Mask('Kaukau','',0,true,function(bearer: Battler) {
+
+    },function(bearer: Battler) {
+
+    },function(bearer: Battler, target: Battler | null, instantaneous = false) {
+        return new Promise((resolve, reject) => {
+
             // ...
-        },
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
-            return new Promise((resolve, reject) => {
 
-                // ...
+            resolve();
+        })
+    }),
 
-                resolve();
-            });
-        },
-    },
-
-    akaku: {
-        name: 'Akaku',
-        image: 3,
-        init: function(bearer: Battler) {
-            // ...
-        },
-        deinit: function(bearer: Battler) {
-            // ...
-        },
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
-            return new Promise((resolve, reject) => {
-
-                // ...
-
-                resolve();
-            });
-        },
-    },
-
-    miru: {
-        name: 'Miru',
-        image: 4,
-        init: function(bearer: Battler) {
-            // ...
-        },
-        deinit: function(bearer: Battler) {
-            // ...
-        },
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
-            return new Promise((resolve, reject) => {
-
-                // ...
-
-                resolve();
-            });
-        },
-    },
-
-    kaukau: {
-        name: 'Kaukau',
-        image: 5,
-        init: function(bearer: Battler) {
-            // ...
-        },
-        deinit: function(bearer: Battler) {
-            // ...
-        },
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
-            return new Promise((resolve, reject) => {
-
-                // ...
-
-                resolve();
-            });
-        },
-    },
-
-    huna: {
-        name: 'Huna',
-        image: 6,
-        init: function(bearer: Battler) {
-            // ...
-        },
-        deinit: function(bearer: Battler) {
-            // ...
-        },
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
-            return new Promise((resolve, reject) => {
-
-                // ...
-
-                resolve();
-            });
-        },
-    },
-
-    komau: {
-        name: 'Komau',
-        image: 7,
-        init: function(bearer: Battler) {
-            // ...
-        },
-        deinit: function(bearer: Battler) {
-            // ...
-        },
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
-            return new Promise((resolve, reject) => {
-
-                // ...
-
-                resolve();
-            });
-        },
-    },
-
-    ruru: {
-        name: 'Ruru',
-        image: 8,
-        init: function(bearer: Battler) {
-            // ...
-        },
-        deinit: function(bearer: Battler) {
-            // ...
-        },
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
-            return new Promise((resolve, reject) => {
-
-                // ...
-
-                resolve();
-            });
-        },
-    },
-
-    matatu: {
-        name: 'Matatu',
-        image: 9,
-        init: function(bearer: Battler) {
-            // ...
-        },
-        deinit: function(bearer: Battler) {
-            // ...
-        },
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
-            return new Promise((resolve, reject) => {
-
-                // ...
-
-                resolve();
-            });
-        },
-    },
-
-    mahiki: {
-        name: 'Mahiki',
-        image: 10,
-        init: function(bearer: Battler) {
-            // ...
-        },
-        deinit: function(bearer: Battler) {
-            // ...
-        },
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
-            return new Promise((resolve, reject) => {
-
-                // ...
-
-                resolve();
-            });
-        },
-    },
-
-    rau: {
-        name: 'Rau',
-        image: 11,
-        init: function(bearer: Battler) {
-            // ...
-        },
-        deinit: function(bearer: Battler) {
-            // ...
-        },
-        use: function(bearer: Battler, target: Battler | Battler[] | null) {
-            return new Promise((resolve, reject) => {
-
-                // ...
-
-                resolve();
-            });
-        },
-    },
+    // Noble masks here later ---
 
     // avohkii
     // kraahkan

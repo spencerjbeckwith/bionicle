@@ -1,19 +1,22 @@
-import Battler from "../battle/battler";
+import Battler from '../battle/battler';
 import deepfreeze from 'deepfreeze';
+import { Usable, UseFunction } from './inventory/items';
 
 interface SpecialMoveList {
     flare: SpecialMove;
     // New moves here
 }
 
-class SpecialMove {
+class SpecialMove extends Usable {
     constructor(
-        public name: string, 
-        public description: string, 
-        public cost: number, 
-        public requireTarget: boolean, 
-        public use: (bearer: Battler, target: Battler | null, instantaneous?: boolean) => Promise<void>
-    ) {}
+        public readonly name: string, 
+        public readonly description: string, 
+        public readonly cost: number, 
+        requireTarget: boolean, 
+        use: UseFunction,
+    ) {
+        super(requireTarget, use);
+    }
 }
 
 interface LevelUpMove {

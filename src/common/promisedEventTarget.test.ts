@@ -85,3 +85,24 @@ test('listeners can be removed',() => {
     target.removePromisedEventListener('test',mockFn);
     expect(target.listeners.test.length).toBe(0);
 });
+
+test('removeAll() removes all isteners',() => {
+    function mockFn(): Promise<void> {
+        return new Promise((resolve) => {
+            resolve();
+        });
+    }
+
+    const target = new PromisedEventTarget();
+    target.addPromisedEventListener('test',mockFn);
+    target.addPromisedEventListener('test',mockFn);
+    target.addPromisedEventListener('test2',mockFn);
+    target.addPromisedEventListener('test3',mockFn);
+
+    target.removeAllPromisedEventListeners();
+
+    expect(target.listeners.test).toBeUndefined();
+    expect(target.listeners.test2).toBeUndefined();
+    expect(target.listeners.test3).toBeUndefined();
+    expect(target.listeners).toMatchObject({});
+});

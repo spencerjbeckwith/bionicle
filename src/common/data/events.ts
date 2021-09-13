@@ -7,7 +7,7 @@ import { StatusEffect } from './statuses';
 type BattleControllerEventTypes = 'start' | 'end' | 'beginRound' | 'endRound';
 
 type BattlerEventTypes = 'start' | 'end' | 'beginTurn' | 'endTurn' | 'beginRound' | 'endRound' 
-    | 'damage' | 'heal' | 'knockOut' | 'statusApplied' | 'statusRemoved' | 'beforeAffected' | 'afterAffected';
+    | 'damage' | 'heal' | 'knockOut' | 'revive' | 'statusApplied' | 'statusRemoved' | 'beforeAffected' | 'afterAffected';
 
 // BATTLER EVENTS
 
@@ -59,6 +59,20 @@ class BattlerHealEvent extends BattlerEvent {
     }
 }
 
+/** Fires before sustained HP damage causes this Battler to be KOed, but after the damage is dealt. */
+class BattlerKnockOutEvent extends BattlerEvent {
+    constructor(battler: Battler, public cause: Action | null, instantaneous = false) {
+        super('knockOut', battler, instantaneous);
+    }
+}
+
+/** Fires after this Battler recovers from a KO. */
+class BattlerReviveEvent extends BattlerEvent {
+    constructor(battler: Battler, public cause: Action | null, instantaneous = false) {
+        super('revive', battler, instantaneous);
+    }
+}
+
 /** Fires immediately when any status is applied to this Battler initially, but not when turns are added to an already-applied status. */
 class BattlerStatusAppliedEvent extends BattlerEvent {
     constructor(battler: Battler, public status: StatusEffect, public turns: number, instantaneous = false) {
@@ -70,13 +84,6 @@ class BattlerStatusAppliedEvent extends BattlerEvent {
 class BattlerStatusRemovedEvent extends BattlerEvent {
     constructor(battler: Battler, public status: StatusEffect, public forced = false, instantaneous = false) {
         super('statusRemoved', battler, instantaneous);
-    }
-}
-
-/** Fires before sustained HP damage causes this Battler to be KOed, but after the damage is dealt. */
-class BattlerKnockOutEvent extends BattlerEvent {
-    constructor(battler: Battler, public cause: Action | null, instantaneous = false) {
-        super('knockOut', battler, instantaneous);
     }
 }
 
@@ -116,9 +123,10 @@ export {
     BattlerEndRoundEvent,
     BattlerDamageEvent,
     BattlerHealEvent,
+    BattlerKnockOutEvent,
+    BattlerReviveEvent,
     BattlerStatusAppliedEvent,
     BattlerStatusRemovedEvent,
-    BattlerKnockOutEvent,
     BattlerBeforeAffectedEvent,
     BattlerAfterAffectedEvent,
 }

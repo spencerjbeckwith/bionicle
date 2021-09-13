@@ -1,14 +1,14 @@
 import { BattlerAfterAffectedEvent, BattlerBeforeAffectedEvent, BattlerDamageEvent, BattlerEvent, BattlerKnockOutEvent } from '../data/events';
+import { UsableItem } from '../data/inventory/items';
+import { Mask } from '../data/masks';
 import { SpecialMove } from '../data/moves';
 import { Action } from './actions';
-import BattleController from './battleController';
 import Battler from './battler';
 import mockTemplate from './mocks/mockTemplate';
 
 test('attack actions deal damage and trigger damage/affected/KO events',async () => {
     const attacker = new Battler(mockTemplate);
     const defender = new Battler(mockTemplate);
-    const bc = new BattleController([ attacker ], [ defender ]);
     const action = new Action('attack',attacker,defender,null,true);
 
     // Set up listeners
@@ -25,13 +25,13 @@ test('attack actions deal damage and trigger damage/affected/KO events',async ()
     defender.addPromisedEventListener('damage',mockListener);
     defender.addPromisedEventListener('knockOut',mockListener);
 
-    await action.execute(bc);
+    await action.execute();
 
     expect(defender.stats.hp).toBeLessThan(defender.stats.maxHP);
     expect(mockFn).toBeCalledTimes(3); // beforeAffected -> damage -> afterAffected
 
     attacker.stats.attack = 10000;
-    await action.execute(bc);
+    await action.execute();
 
     expect(defender.stats.hp).toBe(0);
     expect(defender.isKOed).toBe(true);
@@ -42,7 +42,6 @@ test('action targets can be redirected in beforeAffected events',async () => {
     const attacker = new Battler(mockTemplate);
     const firstTarget = new Battler(mockTemplate);
     const actualTarget = new Battler(mockTemplate);
-    const bc = new BattleController([ attacker ], [ firstTarget, actualTarget ]);
     const action = new Action('attack', attacker, firstTarget, null, true);
 
     // Set up redirect listener
@@ -52,14 +51,14 @@ test('action targets can be redirected in beforeAffected events',async () => {
             mockFn();
             // Manual re-assignment: in practical use, would probably need to search allies/foes appropriately
             // You would also need to make sure the action is an attack first
-            event.action.target = bc.foes[1];
+            event.action.target = actualTarget;
             resolve(event);
         });
     }
 
     firstTarget.addPromisedEventListener('beforeAffected',mockListener);
 
-    await action.execute(bc);
+    await action.execute();
 
     expect(firstTarget.stats.hp).toBe(firstTarget.stats.maxHP);
     expect(actualTarget.stats.hp).toBeLessThan(actualTarget.stats.maxHP);
@@ -69,7 +68,6 @@ test('action targets can be redirected in beforeAffected events',async () => {
 test('BattlerEvents have access to actions',async () => {
     const attacker = new Battler(mockTemplate);
     const defender = new Battler(mockTemplate);
-    const bc = new BattleController([ attacker ], [ defender ]);
     const action = new Action('attack', attacker, defender, null, true);
 
     // Set up listeners
@@ -95,7 +93,7 @@ test('BattlerEvents have access to actions',async () => {
 
     defender.addPromisedEventListener('afterAffected',mockListener);
 
-    await action.execute(bc);
+    await action.execute();
 
     expect(attacker.stats.hp).toBe(defender.stats.hp);
     expect(mockFn).toBeCalledTimes(1);
@@ -103,15 +101,14 @@ test('BattlerEvents have access to actions',async () => {
     defender.removePromisedEventListener('afterAffected',mockListener);
     defender.addPromisedEventListener('damage',mockDamageListener);
 
-    await action.execute(bc);
+    await action.execute();
 
     expect(defender.stats.hp).toBe(0);
     expect(defender.isKOed).toBe(true);
 });
 
-test('special moves can execute with no target',async () => {
+test('use actions can execute with no target',async () => {
     const battler = new Battler(mockTemplate);
-    const bc = new BattleController([ battler ], []);
 
     // Setup mocks
     const mockMove = new SpecialMove('','',0,false,
@@ -125,18 +122,17 @@ test('special moves can execute with no target',async () => {
         }
     );
 
-    const action = new Action('special', battler, null, mockMove, true);
-    await action.execute(bc);
+    const action = new Action('use', battler, null, mockMove, true);
+    await action.execute();
     expect(battler.stats.hp).toBe(battler.stats.maxHP-1);
 });
 
-test('special moves fire before/after affect events and trigger their use on one target',async () => {
+test('use actions fire before/after affect events and trigger the use method on one target',async () => {
     const battler = new Battler(mockTemplate);
-    const bc = new BattleController([ battler ], []);
 
     // Setup mocks
     const mockFn = jest.fn();
-    const mockMove = new SpecialMove('','',0,true,
+    const mockItem = new UsableItem('','',0,0,false,false,true,true,true,
         function(bearer: Battler, target: Battler | null, instantaenous = false): Promise<void> {
             return target.damage(1);
         }
@@ -154,23 +150,22 @@ test('special moves fire before/after affect events and trigger their use on one
     battler.addPromisedEventListener('beginTurn',mockListener);
     battler.addPromisedEventListener('endTurn',mockListener);
 
-    const action = new Action('special', battler, battler, mockMove, true);
+    const action = new Action('use', battler, battler, mockItem, true);
     await battler.doTurn(action, true);
 
     expect(battler.stats.hp).toBe(battler.stats.maxHP-1);
     expect(mockFn).toBeCalledTimes(5);
 });
 
-test('special moves fire before/after affect events and trigger their use on multiple targets',async () => {
+test('use actions fire before/after affect events and trigger the use method on multiple targets',async () => {
     const attacker = new Battler(mockTemplate);
     const target1 = new Battler(mockTemplate);
     const target2 = new Battler(mockTemplate);
     const target3 = new Battler(mockTemplate);
-    const bc = new BattleController([ attacker ], [ target1, target2, target3 ]);
 
     // Setup mocks
     const mockFn = jest.fn();
-    const mockMove = new SpecialMove('','',0,true,
+    const mockMask = new Mask('','',0,true,(bearer: Battler) => {},(bearer: Battler) => {},
         function(bearer: Battler, target: Battler | null, instantaneous = false): Promise<void> {
             return target.damage(1);
         }
@@ -194,7 +189,7 @@ test('special moves fire before/after affect events and trigger their use on mul
     target3.addPromisedEventListener('afterAffected',mockListener);
     target3.addPromisedEventListener('damage',mockListener);
 
-    const action = new Action('special', attacker, [ target1, target2, target3 ], mockMove, true);
+    const action = new Action('use', attacker, [ target1, target2, target3 ], mockMask, true);
     await attacker.doTurn(action, true);
 
     // This doesn't actually ensure all the events happened in order...
