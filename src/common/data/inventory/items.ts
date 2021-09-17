@@ -26,7 +26,7 @@ type UseFunction = (bearer: Battler, target: Battler | null, instantaneous?: boo
 /** Represents anything that can be used that has an affect in battle, such as special moves, masks, or items. */
 class Usable {
     constructor(
-        public readonly requireTarget: boolean,
+        public readonly targetType: 'single' | 'multiple' | null,
         public readonly use: UseFunction,
     ) {}
 }
@@ -48,10 +48,10 @@ class UsableItem extends Usable implements InventoryItem {
         public readonly canSell: boolean,
         public readonly destroyOnDrop: boolean,
         public readonly consumedOnUse: boolean,
-        requireTarget: boolean,
+        targetType: 'single' | 'multiple' | null,
         use: UseFunction,
     ) {
-        super(requireTarget, use);
+        super(targetType, use);
     }
 }
 
@@ -62,7 +62,7 @@ const inventoryItems: InventoryItemList = {
     bambooDisk: new UsableItem(
         'Bamboo Disk',
         'Fling at a foe for one-time damage',
-        15, 5, true, true, false, true, true,
+        15, 5, true, true, false, true, 'single',
         function(bearer: Battler, target: Battler | null, instantaneous = false) {
             return new Promise((resolve, reject) => {
                 resolve();

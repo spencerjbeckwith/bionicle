@@ -12,10 +12,10 @@ class SpecialMove extends Usable {
         public readonly name: string, 
         public readonly description: string, 
         public readonly cost: number, 
-        requireTarget: boolean, 
+        targetType: 'single' | 'multiple' | null, 
         use: UseFunction,
     ) {
-        super(requireTarget, use);
+        super(targetType, use);
     }
 }
 
@@ -29,7 +29,7 @@ const specialMoves : SpecialMoveList = {
         'Flare',
         'Attack a foe with fire.',
         1,
-        true,
+        'single',
         function(bearer: Battler, target: Battler | null, instantaneous = false) {
             return new Promise((resolve, reject) => {
 

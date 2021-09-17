@@ -1,21 +1,28 @@
 import { BattlerTemplate } from '../../data/battlerTemplate';
+import { spr } from '../../sprite';
+import { mockElement2 } from './mockElements';
+import mockItem from './mockItem';
+import mockMask from './mockMask';
+import mockMove from './mockMove';
 
 const mockTemplate: BattlerTemplate = {
     weapon: null,
     equipment: null,
     accessory: null,
-    masks: [],
+    masks: [ mockMask ],
 
-    name: 'MOCK',
+    name: 'Mock Battler',
     description: '',
     dropMoney: 0,
     dropXP: 0,
-    elements: [],
+    elements: [ mockElement2 ],
     immunities: [],
-    inventory: [],
-    moves: [],
+    inventory: [ mockItem ],
+    moves: [
+        mockMove,
+    ],
     palette: 0,
-    sprite: null,
+    sprite: spr.fikou,
     stats: {
         hp: 10,
         maxHP: 10,
@@ -23,8 +30,8 @@ const mockTemplate: BattlerTemplate = {
         maxNova: 10,
         attack: 2,
         defense: 1,
-        elAttack: 2,
-        elDefense: 1,
+        spAttack: 2,
+        spDefense: 1,
         accuracy: 100,
         evasion: 0,
         critical: 0,

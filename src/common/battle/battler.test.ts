@@ -121,16 +121,16 @@ test('weapon, equipment, accessory, and mask equipping',() => {
     expect(mockAccessory.deinit).toBeCalledTimes(2);
     
     // Equip and remove mask
-    mock.template.masks.push(mockMask); // Make a mask available
-    expect(mock.currentMask).toBe(null); // Battler created when no masks available, so current is null
-    expect(mock.equipMask(0)).toBe(null);
-    expect(mock.currentMask).toBe(0);
-    mock.equipMask(0);
+    mock.template.masks.push(mockMask); // Make second mock mask available as index 1
+    expect(mock.currentMask).toBe(0); // Battler created with only one mask, so current index should be 0
+    expect(mock.equipMask(1)).toBe(0);
+    expect(mock.currentMask).toBe(1);
+    expect(mock.equipMask(0)).toBe(1);
     expect(mock.equipMask(null)).toBe(0);
     expect(mock.currentMask).toBe(null);
 
-    expect(mockMask.init).toBeCalledTimes(2);
-    expect(mockMask.deinit).toBeCalledTimes(2);
+    expect(mockMask.init).toBeCalledTimes(1);
+    expect(mockMask.deinit).toBeCalledTimes(1);
 });
 
 test('end round removes statuses and dispatches event', async () => {

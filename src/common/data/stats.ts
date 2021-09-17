@@ -7,8 +7,8 @@ class StatCollection {
 
     attack: number;
     defense: number;
-    elAttack: number;
-    elDefense: number;
+    spAttack: number;
+    spDefense: number;
     speed: number;
 
     evasion: number;
@@ -27,8 +27,8 @@ class StatCollection {
 
         this.attack = stats.attack;
         this.defense = stats.defense;
-        this.elAttack = stats.elAttack;
-        this.elDefense = stats.elDefense;
+        this.spAttack = stats.spAttack;
+        this.spDefense = stats.spDefense;
         this.speed = stats.speed;
 
         this.evasion = stats.evasion;

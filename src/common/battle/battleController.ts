@@ -161,7 +161,7 @@ class BattleController extends PromisedEventTarget {
         const initialTurnOrder = this.getTurnOrder();
         if (initialTurnOrder.length === 0) {
             // We have no battlers? We can't do anything!
-            throw 'Cannot start a turn with battlers!';
+            throw 'Cannot start a turn without battlers!';
         }
 
         // From here, let battlers simultaneously determine their actions

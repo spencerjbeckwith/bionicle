@@ -1,10 +1,13 @@
 import { BattlerAfterAffectedEvent, BattlerBeforeAffectedEvent, BattlerDamageEvent, BattlerEvent, BattlerKnockOutEvent } from '../data/events';
-import { UsableItem } from '../data/inventory/items';
-import { Mask } from '../data/masks';
-import { SpecialMove } from '../data/moves';
 import { Action } from './actions';
 import Battler from './battler';
+
 import mockTemplate from './mocks/mockTemplate';
+import mockMove from './mocks/mockMove';
+import { mockElement1 } from './mocks/mockElements';
+import mockItem from './mocks/mockItem';
+import mockMask from './mocks/mockMask';
+// If you're testing with mockMove, mockItem, and mockMask, be sure your fake actions match their targetingType
 
 test('attack actions deal damage and trigger damage/affected/KO events',async () => {
     const attacker = new Battler(mockTemplate);
@@ -65,6 +68,23 @@ test('action targets can be redirected in beforeAffected events',async () => {
     expect(mockFn).toBeCalled();
 });
 
+test('elemental attack actions apply multipliers and subtract nova from the attacker',async () => {
+    const attacker = new Battler(mockTemplate);
+    const defender = new Battler(mockTemplate);
+    const action = new Action('attack',attacker,defender,null,true);
+    action.element = mockElement1;
+
+    // Set to controlled attack/defense
+    attacker.stats.attack = 10;
+    defender.stats.defense = 40;
+    const damage = 2;
+    await action.execute();
+
+    // Damage should be our expected result times the attack element multiplier on defending element - depends on the mocks
+    expect(defender.stats.hp).toBe(defender.stats.maxHP - (damage * mockElement1.multipliers.water));
+    expect(attacker.stats.nova).toBeLessThan(attacker.stats.maxNova);
+});
+
 test('BattlerEvents have access to actions',async () => {
     const attacker = new Battler(mockTemplate);
     const defender = new Battler(mockTemplate);
@@ -109,19 +129,6 @@ test('BattlerEvents have access to actions',async () => {
 
 test('use actions can execute with no target',async () => {
     const battler = new Battler(mockTemplate);
-
-    // Setup mocks
-    const mockMove = new SpecialMove('','',0,false,
-        function(bearer: Battler, target: Battler | null, instantaenous = false): Promise<void> {
-            // Normally, if you had a move you want to affect just one Battler (even if its yourself) you'd want to set it as the target.
-            // Doing things to the bearer of the move won't fire their BattlerBeforeAffectedEvent or BattlerAfterAffectedEvents.   
-            return new Promise((resolve, reject) => {
-                bearer.stats.hp--;
-                resolve();
-            });
-        }
-    );
-
     const action = new Action('use', battler, null, mockMove, true);
     await action.execute();
     expect(battler.stats.hp).toBe(battler.stats.maxHP-1);
@@ -132,11 +139,6 @@ test('use actions fire before/after affect events and trigger the use method on 
 
     // Setup mocks
     const mockFn = jest.fn();
-    const mockItem = new UsableItem('','',0,0,false,false,true,true,true,
-        function(bearer: Battler, target: Battler | null, instantaenous = false): Promise<void> {
-            return target.damage(1);
-        }
-    );
     const mockListener = (event: BattlerEvent) => {
         return new Promise<BattlerEvent>((resolve, reject) => {
             mockFn();
@@ -165,11 +167,6 @@ test('use actions fire before/after affect events and trigger the use method on 
 
     // Setup mocks
     const mockFn = jest.fn();
-    const mockMask = new Mask('','',0,true,(bearer: Battler) => {},(bearer: Battler) => {},
-        function(bearer: Battler, target: Battler | null, instantaneous = false): Promise<void> {
-            return target.damage(1);
-        }
-    );
     const mockListener = (event: BattlerEvent) => {
         return new Promise<BattlerEvent>((resolve, reject) => {
             mockFn();
@@ -197,4 +194,36 @@ test('use actions fire before/after affect events and trigger the use method on 
     expect(target2.stats.hp).toBe(target2.stats.maxHP-1);
     expect(target3.stats.hp).toBe(target3.stats.maxHP-1);
     expect(mockFn).toBeCalledTimes(9);
+});
+
+test('Action.isImpossible disallows invalid actions',() => {
+    const attacker = new Battler(mockTemplate);
+    const defender = new Battler(mockTemplate);
+
+    attacker.stats.nova = -1; // Normally this could never happen
+    
+    const elementAttack = new Action('attack',attacker,defender,null,true);
+    expect(elementAttack.isImpossible()).toBe(false);
+
+    elementAttack.element = mockElement1;
+    expect(elementAttack.isImpossible()).not.toBe(false);
+
+    const specialMove = new Action('use',attacker,null,mockMove,true);
+    expect(specialMove.isImpossible()).not.toBe(false);
+
+    attacker.stats.nova = attacker.stats.maxNova;
+    expect(specialMove.isImpossible()).toBe(false);
+});
+
+test('Action.applyRequirements reduces nova when using special moves',() => {
+    const battler = new Battler(mockTemplate);
+    (new Action('use',battler,null,mockMove,true)).applyRequirements();
+    expect(battler.stats.nova).toBeLessThan(battler.stats.maxNova);
+});
+
+test('Action.applyRequirements takes consumed items out of inventory on use',() => {
+    const battler = new Battler(mockTemplate);
+    const startLength = battler.inventory.length;
+    (new Action('use',battler,battler,mockItem,true)).applyRequirements();
+    expect(battler.inventory.length).toBe(startLength - 1);
 });

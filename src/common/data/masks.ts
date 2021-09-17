@@ -24,17 +24,17 @@ class Mask extends Usable implements Equippable {
         public readonly name: string,
         public readonly description: string,
         public readonly image: number,
-        requireTarget: boolean,
+        targetType: 'single' | 'multiple' | null,
         public readonly init: (bearer: Battler) => void,
         public readonly deinit: (bearer: Battler) => void,
         use: UseFunction,
     ) {
-        super(requireTarget, use);
+        super(targetType, use);
     }
 }
 
 const masks : MaskList = {
-    hau: new Mask('Hau','',0,true,function(bearer: Battler) {
+    hau: new Mask('Hau','',0,'single',function(bearer: Battler) {
 
     },function(bearer: Battler) {
 
@@ -47,7 +47,7 @@ const masks : MaskList = {
         })
     }),
 
-    kakama: new Mask('Kakama','',0,true,function(bearer: Battler) {
+    kakama: new Mask('Kakama','',0,'single',function(bearer: Battler) {
 
     },function(bearer: Battler) {
 
@@ -60,7 +60,7 @@ const masks : MaskList = {
         })
     }),
 
-    pakari: new Mask('Pakari','',0,true,function(bearer: Battler) {
+    pakari: new Mask('Pakari','',0,'single',function(bearer: Battler) {
 
     },function(bearer: Battler) {
 
@@ -73,7 +73,7 @@ const masks : MaskList = {
         })
     }),
 
-    akaku: new Mask('Akaku','',0,true,function(bearer: Battler) {
+    akaku: new Mask('Akaku','',0,'single',function(bearer: Battler) {
 
     },function(bearer: Battler) {
 
@@ -86,7 +86,7 @@ const masks : MaskList = {
         })
     }),
 
-    miru: new Mask('Miru','',0,true,function(bearer: Battler) {
+    miru: new Mask('Miru','',0,'single',function(bearer: Battler) {
 
     },function(bearer: Battler) {
 
@@ -99,7 +99,7 @@ const masks : MaskList = {
         })
     }),
 
-    kaukau: new Mask('Kaukau','',0,true,function(bearer: Battler) {
+    kaukau: new Mask('Kaukau','',0,'single',function(bearer: Battler) {
 
     },function(bearer: Battler) {
 

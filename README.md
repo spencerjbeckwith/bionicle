@@ -3,39 +3,31 @@
 ## Development Environment
 
 - You must run `npm install` before using this package.
-- NPM script `buildClient` will watch the source directory and client files to compile/rollup your Typescript for the web client.
-- NPM script `buildServer` will watch the source directory and server files to compile/rollup your Typescript for the server instance.
+- NPM script `buildClient` will watch the source directory and client files to compile/rollup your TypeScript for the web client.
+- NPM script `buildServer` will watch the source directory and server files to compile/rollup your TypeScript for the server instance.
 - NPM script `host` will host a local webserver, serving your game files, and will open your browser to the page.
 - NPM script `watch` will watch the images asset folder and will recompile your atlas (via the `atlas` script) automatically when a change is detected. If you've also run `build` this change will then trigger that as well.
 - NPM script `test` runs (and watches) the test files located alongside source files.
 
-Running these scripts together ensures a smooth development process. When saving an image or Typescript, the only thing you must do to run the game is refresh your browser page. I recommend setting up a vscode task that will run all these scripts at once and open them all parallel to each other in the same terminal.
+Running these scripts together ensures a smooth development process. When saving an image or TypeScript, the only thing you must do to run the game is refresh your browser page. I recommend setting up a vscode task that will run all these scripts at once and open them all parallel to each other in the same terminal.
 
 ==========
 
-BIONICLE MMORPG
+# Game Design
+
+The game should encourage the players to think like Toa and follow the three virtues: unity, duty, and destiny. Strength comes in numbers - It's unlikely the players will have every mask, element or item at their disposal, and as characters have different inventories, masks, and movesets, it'll be a matter of preserving your own personal goods for the sake of the team. Elemental moves must be designed to complement each other, and cover each others weaknesses - encouraging a player party to diversify and work to compensate for one another's shortcomings. **All design choices should be in purpose of making the players work as a team, communicate, and cooperate to defeat the foe.** No player should be able to fight well on their own - they completely depend on one another. Keep enemies varied in their attacking styles and what is necessary to defeat them - and pull out some twists, too. But keep them defeatable. Fit them in the lore of the Bionicle universe but give them uniqueness compared to each other.
 
 Okay, so what exactly am I trying to make?
-- A Bionicle MMO in which you explore the island of Mata Nui, leveling up your Toa as you scour the island for your masks of power.
- I want to keep the battle system simple, but engaging. Outside of the game's characters, setting and content - enemies will vary and the player will have a variety of options available for each Toa they want to build.
+- A Bionicle online game in which you explore the island of Mata Nui, leveling up your Toa as you scour the island for your masks of power.
+- A simple, yet engaging, battle system. Outside of the game's characters, setting and content - enemies will vary and the player will have a variety of options available for each Toa they want to build. The battle system will be infinitely extendable.
+- The server will be very simple to install and host - only requiring node.js and a local install of this repository
+
+## Masks and Equipment
 
 Toa Equipment:
-- Right Hand - main weapon
-    - Weapons: Some take more than one hand, such as a Greatsword. All weapons enable a different sort of power. Ranged weapons require appropriate ammunition in your inventory.
-        Weapons:
-            - Sword - one handed
-            - Greatsword - two handed
-            - Axe - one handed
-            - Claw - one handed
-            - Hook - one handed
-            - Katana - one handed
-            - Shield - left hand only, increases defense
-            - Disk Launcher - two handed but much more effective than throwing a disk. Requires either bamboo or Kanoka disks to use
-            - Zamor Sphere Launcher. one handed, and generally weaker than a disk launcher. Requires zamor spheres to use
-                Each weapon has different variants as well, which may boost different stats or modify elemental resistances.
-                Each weapon, when used, has a specific attack move. Dual-wielding allows for two attacks that are weaker. Wielding one single-hand weapon increases its output as well.
-- Left Hand - support equipment or another weapon
-- Armor
+- Weapon
+    - Controls damage output and may have special offensive or defensive traits
+- Equipment
     - Can block incoming damage, in the form of physical or elemental protection. May also provide other boons or bonuses
 - Accessory
     - Can provide all sorts of unique effects, statuses, or resistances
@@ -67,47 +59,35 @@ Toa Equipment:
     Komau - mind control
         Passive: 
         Active: can enrage low-level creatures
+    Etc.
 
-Eh... do we need a battle system that impelements your position in a battle? For example, whether or not you're detected by an enemy or whether or not they see you as hostile
+## Elements
+Different attacks may use different elements. Elemental attacks or special moves may have their damage multiplied, depending on the element of their target.
 
-I dunno. How does multiplayer play in?
-
-You have to decide: make it an MMO, or a local-play sort of thing? An MMO is a bit much to work on
-Does this even need to be multiplayer? I mean... single-player would be easier. But managing six toa at once would be a total headache. That's too much of a toolset. It'd be easier if each player only manages one Toa and fights alongside several others... so how do we promote teamwork among team members?
-- Provide several possible battle options you can sacrifice your turn in order to support your teammates:
-    - Protect - take all single-target attacks for an ally this turn
-    - ?...
-
-The idea behind all this is that the harder the battle, the more players have to depend on one another. It's unlikely they'll have every mask, element or item at their disposal - and as characters have different inventories, it'll be a matter of preserving your own personal goods for the sake of the team. UNITY
-Each Toa can only have one element, and that element has a limited moveset, too. So each element has different moves that are meant to complement one another
-Ultimate form of UNITY is to fuse with your teammates once you reach a high enough level - to become a TOA KAITA and control it together.
-DUTY - the quests you're fulfilling
-DESTINY - completing the game. yeah, that's cool.
-
-Design goal: make each character player-independent, but encourage players to depend on each other and cooperate as much as they possibly can.
-Keep enemies varied in their attacking styles and what is necessary to defeat them - and pull out some twists on them, too. But keep them defeatable.
-
-FIRE: Specializes in destroying foes with a mix of power and attrition
-    - Scorch: Apply a burn condition
-    - Flamethrower: Attack a foe with a chance to burn.
-    - Invigorate: Increase an ally's attack and elemental attack
-STONE: Specializes in hard-hitting attacks that use physical defense.
-    - Boulder: Attack a foe with a chance to confuse.
-    - Guard: Increase an ally's defense and elemental defense
-EARTH: Specializes in area-of-effect attacks to deal widespread damage
-    - Earthquake: Attack all foes.
-    - Soothe: Minor healing on an ally
-ICE: Specializes in support and afflicting status ailments
-    - Freeze: Apply a freeze condition
-    - Confuse: Apply a confuse condition
+- FIRE: Specializes in destroying foes with a mix of power and attrition
+    - Scorch: Apply a burn condition.
+    - Flamethrower: Attack a foe with fire, with a chance to burn.
+    - Invigorate: Increase an ally's attack and special attack.
+- STONE: Specializes in hard-hitting attacks that use physical defense.
+    - Boulder: Attack a foe with stone, with a chance to confuse.
+    - Guard: Increase an ally's defense and special defense.
+- EARTH: Specializes in area-of-effect attacks to deal widespread damage
+    - Earthquake: Attack all foes with earth.
+    - Soothe: Minor healing on an ally.
+- ICE: Specializes in support and afflicting status ailments
+    - Freeze: Apply a freeze condition.
+    - Confuse: Apply a confuse condition.
     - Impale: Attack a foe with ice.
-AIR: Specializes in speedy attacks and boosting the party
+- AIR: Specializes in speedy attacks and boosting the party
     - Gust: Attack a foe with air.
     - Float: Increase an ally's evasion
-WATER: Specializes in healing and powering-up the party
+    - Cleanse: Cure an ally's condition.
+- WATER: Specializes in healing, taking hits, and powering-up the party
     - Heal: Minor healing on an ally
+
 Etc. etc... more moves. 
-Point is, every element has a certain moveset that is learned on level up.
+Point is, every element has a certain moveset that is learned on level up. No moveset alone is sufficient - multiple players are needed, or you're gonna have a very hard time.
+
 Enemies can have more than one element, and their moveset is independent of what their element is - they also have access to more elements and moves than the Toa do.
 
 # Technical Info
@@ -217,34 +197,29 @@ So to start a battle, ```startRound()``` is all that needs to be called and it w
 *Any rejection anywhere in the chain may break the entire battle, so be careful and be sure to use ```.finally()``` and make sure you always catch and handle rejections appropriately!*
 
 # To-do
-
-- Make elemental damage formula, including multipliers and immunities
-    - Add elemental damage to physical attacks
-
-- Can masks get knocked off? Maybe make it a status condition?
-
-- At what point do Battler's spend their nova to use a special move?
-- Similarly, at what point do Battler's items get removed from their inventory?
-    - Implement into Action.execute.
-
+- Implement Battler.getAllActions()
 - Write a test for BattleController.startRound()
 
-- Implement Battler.getAllActions()
+New actions to implement and test:
+    - Flee
+    - Give
 
-- Should BattleController dispatch any events? Does it need to extend the PromisedEventTarget at all?
 - Standardize errors thrown by rejected promises
+    - Should rejections singify an application error, or natural game problems? When would they change and how do you account for this?
+    - This will be tough to do, so maybe try approaching it from the top-down level once BattleController.startRound is mostly solid
 - Begin working on client and adding animations to Actions/turns - making them non-instantaneous
-- Where does randomness come from when executing actions? Netcode-wise...
-    - BattleController's startRound() should only be called server-side:
-        - determineAction, on server-side Battler instances, should await a valid network response
-        - once all Actions come in (or time expires?) send all actions to the clients - AFTER RE-RANDOMIZING THEM!
-        - puppet BattleControllers should then call doActions() once they get the actions
-        - server BattleController determines win condition, and if no win, send out updated Battlers and battle state (just to re-sync every turn)
-- How are Actions and Battlers sent over the network?
-- Make battle simulation (a battle with no clients, run in node only)
-    - All classes that return promises (like Timelines and Actions) should resolve immediately
-- Design battle hud
-- How does Client call BattleController and Battler?
-    - Begin making client
+- Design battle HUD
+- Make sprite fonts for GL
 
-- Keep in mind how networking is gonna handle this (and all these promises)
+# Questions to Answer
+- How will masks be knocked off? Make it a status condition maybe?
+- How are Actions and Battlers sent over the network?
+
+# Keep in mind:
+- You probably should split testing (especially on Action) into smaller units
+- All methods that return Promises ***MUST*** have an ```instantaneous``` option! For use in commandline, server and tests.
+- Where does randomness come from when playing online?
+    - Every action generates with randomness - when the server gets the client's actions, it needs to re-randomize these values.
+    - These actions must then be re-distributed to all clients, including the one that made it, so the randomness is uniform on all clients
+        - Then, different status/move/mask/etc. implementations can use an action's randomness freely
+- Where will the differences lie in BattleController and Battler, when they are puppets or not?

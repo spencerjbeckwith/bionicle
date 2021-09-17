@@ -68,6 +68,9 @@ class Battler extends PromisedEventTarget {
         this.server = false;
 
         // Equip our template's equipment
+        this.weapon = null;
+        this.equipment = null;
+        this.accessory = null;
         this.equipWeapon(template.weapon);
         this.equipEquipment(template.equipment);
         this.equipAccessory(template.accessory);
@@ -77,7 +80,7 @@ class Battler extends PromisedEventTarget {
         }
 
         // Other inventory
-        this.inventory = template.inventory;
+        this.inventory = [ ...template.inventory];
         this.money = 0;
 
         // Battle control
@@ -293,7 +296,7 @@ class Battler extends PromisedEventTarget {
         }
 
         this.currentMask = templateMaskIndex;
-        if (this.currentMask !== null) {
+        if (this.currentMask !== null && typeof templateMaskIndex === 'number') {
             this.template.masks[templateMaskIndex].init(this);
         }
         return value;
@@ -519,6 +522,17 @@ class Battler extends PromisedEventTarget {
         }
 
         return false;
+    }
+
+    /** Returns the enemy side in a battle we belong to. Return "allies", "foes", or false if this Battler is neither. Just an inversion of Battler.getSide(). */
+    getOtherSide(): 'allies' | 'foes' | false {
+        const mySide = this.getSide();
+        if (mySide === 'allies') {
+            return 'foes';
+        } else if (mySide === 'foes') {
+            return 'allies';
+        }
+        return mySide;
     }
 
     // TO-DO:
