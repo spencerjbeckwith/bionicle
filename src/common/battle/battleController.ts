@@ -152,6 +152,7 @@ class BattleController extends PromisedEventTarget {
         });
     }
 
+    /** Begins a round of the battle. If this round does not end the battle, this method recurses until the battle ends. */
     startRound(instantaneous = false) {
         // I think this method qualifies as an unforgivable sin
 

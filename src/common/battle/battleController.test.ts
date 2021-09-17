@@ -1,4 +1,5 @@
 import { BattlerBeginTurnEvent, BattlerEndTurnEvent } from '../data/events';
+import Formulas from '../data/formulas';
 import { Action } from './actions';
 import BattleController from './battleController';
 import Battler from './battler';
@@ -161,4 +162,37 @@ test('doActions() fires every BattlerBeginTurn and BattlerEndTurn event', async 
 
     // No winner yet
     expect(result).toBe(false);
+});
+
+test('startRound() recurses until the Battle ends', () => {
+    const ally = new Battler(mockTemplate);
+    const foe = new Battler(mockTemplate);
+    const bc = new BattleController( [ally], [foe] );
+
+    // stub out determineAction on both the ally and the foe
+    ally.determineAction = function(bc: BattleController, instantaneous = false): Promise<Action> {
+        return new Promise<Action>((resolve, reject) => {
+            resolve(new Action('attack', ally, foe, null, true));
+        });
+    }
+
+    foe.determineAction = function(bc: BattleController, instantaneous = false): Promise<Action> {
+        return new Promise<Action>((resolve, reject) => {
+            resolve(new Action('pass', foe, null, null, true));
+        });
+    }
+
+    return new Promise<{victors: string, turnCount: number}>((resolve, reject) => {
+        bc.startRound(true);
+        bc.end = function(victors) {
+            // stub out controller to end the test
+            resolve({
+                victors: victors,
+                turnCount: bc.turn
+            });
+        };
+    }).then(data => {
+        expect(data.victors).toBe('allies');
+        expect(data.turnCount).toBe(Formulas.attacksToDefeat(ally.stats.attack,foe.stats.defense,foe.stats.maxHP));
+    });
 });

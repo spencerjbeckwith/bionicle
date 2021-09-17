@@ -132,8 +132,6 @@ Timelines are intended for battle animations or different screen effects.
 
 ## Special Moves
 
-(not implemented yet. Do next)
-
 Battlers have access to different "movesets" defined by their template. Player Battlers learn moves as they level up, according to their element. Non-player Battlers can have access to any move, regardless of their element, as set in their template. Special Moves are not the same as Actions - Actions are just able to represent a Battler using a special move, in addition to all the other possibilities available to a Battler.
 
 Special Moves have a "use" method, like items or masks, which returns a promise that resolves once all the moves effects are over and complete.
@@ -197,19 +195,54 @@ So to start a battle, ```startRound()``` is all that needs to be called and it w
 *Any rejection anywhere in the chain may break the entire battle, so be careful and be sure to use ```.finally()``` and make sure you always catch and handle rejections appropriately!*
 
 # To-do
-- Implement Battler.getAllActions()
-- Write a test for BattleController.startRound()
+- Implement (as far as you can) Battler.determineAction
+    - What exactly does a network 'puppet' mean? When is the BattleController a puppet and when are Battlers puppets?
+        - BattleController is a puppet in the client while playing online. It is not a puppet when playing locally offline, or when ran in the server context
+        - Battler is a puppet in the client while playing online. It is not a puppet when playing locally offline, or when ran in the server context
+    - So now here's a question: how much information is really needed to represent Battler puppets? Would it be better off to use a different class?
+        - I'm not sure about that yet. But for example, other than the player's Battler, each client doesn't need to know other Battlers' stats etc.
+            - And if stat/move/item information is sent to the client, hackers could expose that data... should this be a concern?
+            - Eh it's an open source project anyway. If somebody wants to hack, go ahead. Since it won't be an MMO it isn't hurting anyone else
+    - What logic gets skipped on client when a Battler or BattlerController is a puppet?
+        - All important calculations must happen on the server, not any local client
+        - All client needs to send is their player input.
+        - On client:
+            - BattleController.startRound never has to happen, just determineAction. Then do all the actions once they're received from the server
+            - But would this actually work? I mean, think of it this way, you can approach this in two ways but regardless, the actions/animations must be executed on clients.
+                - Option one: All the clients run their BattleController puppets 'in parallel'
+                - Option two: the server very closely controls when client's doActions() or startRound() is called
+            - Okay so here's how it'll work on client while online:
+                - Battle begins!
+                - BattleController.startRound is first called
+                - determineAction is called for every Battler
+                    - the local player picks their action, sends it to the server, and must wait for the server confirmation before resolving. Resolve with whatever the server sends back when the time comes.
+                    - other players pick their stuff and do the same.
+                    - Once the server has everybody's actions, send out the confirmation to everybody with all the actions, which will resolve every client's determineAction() promise for every battler at once - and continue the execution of startRound()
+                - The animations play
+                - Server should, at some point, update the state of the battle... include this in the confirmation? In confirmation, then probably after the turn as well...
+                    - So confirmation must include:
+                        - every action of every battler
+                        - state of the battle and state of every battler, after every action is done - and clients update that information once the round is done animating for them, whether or not the data is still in-sync
+                        - If the battle is over, server will respond?
+- Yikes, this is complex. I'm starting to think the amount of functionality that can be truly re-used between server and client is a bit more limited than I thought.
+- spend some time thinking about this. Boy
 
-New actions to implement and test:
-    - Flee
+- New actions to implement and test:
+    - Flee - must integrate into BattleController.checkWinCondition and startRound
+        - Every battle must have a "canFlee" flag - so you can't run from bosses or other players
+        - Battle ends when all foes have fled or one ally has fled.
     - Give
+        - Should Battlers have an inventory limit? Probably. Where and how will it be enforced? I guess that depends on where the items come from.
+    - Switch Mask
 
 - Standardize errors thrown by rejected promises
-    - Should rejections singify an application error, or natural game problems? When would they change and how do you account for this?
+    - Should rejections signify an application error, or natural game problems? When would they change and how do you account for this?
     - This will be tough to do, so maybe try approaching it from the top-down level once BattleController.startRound is mostly solid
+    - But because rejections stop an entire promise chain... nothing should "naturally" reject. So forget that. All rejections should be counted as application errors.
 - Begin working on client and adding animations to Actions/turns - making them non-instantaneous
 - Design battle HUD
 - Make sprite fonts for GL
+- Everything lmao
 
 # Questions to Answer
 - How will masks be knocked off? Make it a status condition maybe?

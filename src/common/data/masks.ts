@@ -1,14 +1,14 @@
 import Battler from '../battle/battler';
 import deepfreeze from 'deepfreeze';
-import { EquipItem, Equippable, Usable, UseFunction } from './inventory/items';
+import {  Equippable, Usable, UseFunction } from './usable';
 
 interface MaskList {
     hau: Mask;
-    kakama: Mask;
-    pakari: Mask;
-    akaku: Mask;
-    miru: Mask;
-    kaukau: Mask;
+    // kakama: Mask;
+    // pakari: Mask;
+    // akaku: Mask;
+    // miru: Mask;
+    // kaukau: Mask;
     // huna: Mask;
     // komau: Mask;
     // ruru: Mask;
@@ -25,16 +25,17 @@ class Mask extends Usable implements Equippable {
         public readonly description: string,
         public readonly image: number,
         targetType: 'single' | 'multiple' | null,
+        defaultTarget: 'friendly' | 'enemy',
         public readonly init: (bearer: Battler) => void,
         public readonly deinit: (bearer: Battler) => void,
         use: UseFunction,
     ) {
-        super(targetType, use);
+        super(targetType, defaultTarget, use);
     }
 }
 
 const masks : MaskList = {
-    hau: new Mask('Hau','',0,'single',function(bearer: Battler) {
+    hau: new Mask('Hau','',0,'single','enemy',function(bearer: Battler) {
 
     },function(bearer: Battler) {
 
@@ -47,76 +48,17 @@ const masks : MaskList = {
         })
     }),
 
-    kakama: new Mask('Kakama','',0,'single',function(bearer: Battler) {
-
-    },function(bearer: Battler) {
-
-    },function(bearer: Battler, target: Battler | null, instantaneous = false) {
-        return new Promise((resolve, reject) => {
-
-            // ...
-
-            resolve();
-        })
-    }),
-
-    pakari: new Mask('Pakari','',0,'single',function(bearer: Battler) {
-
-    },function(bearer: Battler) {
-
-    },function(bearer: Battler, target: Battler | null, instantaneous = false) {
-        return new Promise((resolve, reject) => {
-
-            // ...
-
-            resolve();
-        })
-    }),
-
-    akaku: new Mask('Akaku','',0,'single',function(bearer: Battler) {
-
-    },function(bearer: Battler) {
-
-    },function(bearer: Battler, target: Battler | null, instantaneous = false) {
-        return new Promise((resolve, reject) => {
-
-            // ...
-
-            resolve();
-        })
-    }),
-
-    miru: new Mask('Miru','',0,'single',function(bearer: Battler) {
-
-    },function(bearer: Battler) {
-
-    },function(bearer: Battler, target: Battler | null, instantaneous = false) {
-        return new Promise((resolve, reject) => {
-
-            // ...
-
-            resolve();
-        })
-    }),
-
-    kaukau: new Mask('Kaukau','',0,'single',function(bearer: Battler) {
-
-    },function(bearer: Battler) {
-
-    },function(bearer: Battler, target: Battler | null, instantaneous = false) {
-        return new Promise((resolve, reject) => {
-
-            // ...
-
-            resolve();
-        })
-    }),
-
-    // Noble masks here later ---
-
-    // avohkii
-    // kraahkan
-    // etc...?
+    // kakama
+    // pakari
+    // akaku
+    // miru
+    // kaukau
+    // huna
+    // komau
+    // ruru
+    // matatu
+    // mahiki
+    // rau
 
     // New masks here
 }

@@ -1,5 +1,6 @@
-import Battler from "../../battle/battler";
+import Battler from '../../battle/battler';
 import deepfreeze from 'deepfreeze';
+import { UseFunction, Usable, Equippable } from '../usable';
 
 interface InventoryItemList {
     bambooDisk: UsableItem;
@@ -21,22 +22,6 @@ interface InventoryItem {
     //  - sprite icon information
 }
 
-type UseFunction = (bearer: Battler, target: Battler | null, instantaneous?: boolean) => Promise<void>
-
-/** Represents anything that can be used that has an affect in battle, such as special moves, masks, or items. */
-class Usable {
-    constructor(
-        public readonly targetType: 'single' | 'multiple' | null,
-        public readonly use: UseFunction,
-    ) {}
-}
-
-/** Represents anything that can be equipped to a Battler with the init/deinit system. */
-interface Equippable {
-    init: (bearer: Battler) => void;
-    deinit: (bearer: Battler) => void;
-}
-
 /** Represents any item that can be used and that is not equippable. */
 class UsableItem extends Usable implements InventoryItem {
     constructor(
@@ -49,9 +34,10 @@ class UsableItem extends Usable implements InventoryItem {
         public readonly destroyOnDrop: boolean,
         public readonly consumedOnUse: boolean,
         targetType: 'single' | 'multiple' | null,
+        defaultTarget: 'friendly' | 'enemy',
         use: UseFunction,
     ) {
-        super(targetType, use);
+        super(targetType, defaultTarget, use);
     }
 }
 
@@ -62,7 +48,7 @@ const inventoryItems: InventoryItemList = {
     bambooDisk: new UsableItem(
         'Bamboo Disk',
         'Fling at a foe for one-time damage',
-        15, 5, true, true, false, true, 'single',
+        15, 5, true, true, false, true, 'single', 'enemy',
         function(bearer: Battler, target: Battler | null, instantaneous = false) {
             return new Promise((resolve, reject) => {
                 resolve();
@@ -74,4 +60,4 @@ const inventoryItems: InventoryItemList = {
 }
 
 deepfreeze(inventoryItems);
-export { InventoryItem, UseFunction, Usable, Equippable, UsableItem, EquipItem, inventoryItems };
+export { InventoryItem, UsableItem, EquipItem, inventoryItems };

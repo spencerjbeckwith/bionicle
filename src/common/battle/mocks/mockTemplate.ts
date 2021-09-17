@@ -18,6 +18,7 @@ const mockTemplate: BattlerTemplate = {
     elements: [ mockElement2 ],
     immunities: [],
     inventory: [ mockItem ],
+    backpack: [],
     moves: [
         mockMove,
     ],

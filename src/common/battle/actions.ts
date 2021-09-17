@@ -1,12 +1,13 @@
 import { Element } from '../data/elements';
 import { BattlerAfterAffectedEvent, BattlerBeforeAffectedEvent } from '../data/events';
 import Formulas from '../data/formulas';
-import { Usable, UsableItem } from '../data/inventory/items';
+import { Usable } from '../data/usable';
+import { UsableItem } from '../data/inventory/items';
 import Battler from './battler';
 import { SpecialMove } from '../data/moves';
 import { Mask } from '../data/masks';
 
-type ActionType = 'attack' | 'use'; // New action types here
+type ActionType = 'attack' | 'use' | 'pass'; // New action types here
 
 /** Represents what a Battler is going to do on any turn. */
 class Action {
@@ -159,6 +160,11 @@ class Action {
                     break;
                 }
 
+                case ('pass'): {
+                    resolve();
+                    break;
+                }
+
                 // More action types go here
 
                 default: {
@@ -218,6 +224,10 @@ class Action {
                 return false;
             }
 
+            case ('pass'): { 
+                return false; // Always possible
+            }
+
             // More action types go here
 
             default: { break; }
@@ -254,6 +264,8 @@ class Action {
                     }
                     break;
                 }
+
+                case ('pass'): { break; }
 
                 // More action types go here
 

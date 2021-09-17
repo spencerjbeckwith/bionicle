@@ -5,6 +5,7 @@ import { BattlerBeginTurnEvent, BattlerEndTurnEvent, BattlerBeginRoundEvent, Bat
 import { Action } from './actions';
 import { Weapon } from '../data/inventory/weapons';
 import { Equipment } from '../data/inventory/equipment';
+import { Usable } from '../data/usable';
 import { UsableItem, InventoryItem } from '../data/inventory/items';
 import { Accessory } from '../data/inventory/accessories';
 import { AppliedStatusEffect, StatusEffect } from '../data/statuses';
@@ -42,8 +43,10 @@ class Battler extends PromisedEventTarget {
     equipment: Equipment | null;
     /** What accessory this Battler has equipped */
     accessory: Accessory | null;
-    /** What items this Battler has access to */
-    inventory: (Weapon | Equipment | Accessory | UsableItem | InventoryItem | null)[];
+    /** What items this Battler has access to in battle */
+    inventory: (UsableItem | null)[];
+    /** What other things this Battler is carrying */
+    backpack: (Weapon | Equipment | Accessory | InventoryItem | null)[];
     /** Indicates which mask of the template's mask list is currently worn by this battler. */
     currentMask: number | null;
 
@@ -80,7 +83,8 @@ class Battler extends PromisedEventTarget {
         }
 
         // Other inventory
-        this.inventory = [ ...template.inventory];
+        this.inventory = [ ...template.inventory ];
+        this.backpack = [ ...template.backpack ];
         this.money = 0;
 
         // Battle control
@@ -512,63 +516,140 @@ class Battler extends PromisedEventTarget {
         })
     }
 
-    /** Returns what side in a battle we belong to. Return "allies", "foes", or false if this Battler is neither... somehow. */
-    getSide(): 'allies' | 'foes' | false {
-        if (!this.bc) {return false;}
+    /** Returns what side in a battle we belong to. Returns "allies" or "foes". */
+    getSide(): 'allies' | 'foes' {
         if (this.bc.allies.includes(this)) {
             return 'allies';
-        } else if (this.bc.foes.includes(this)) {
+        } else {
             return 'foes';
         }
-
-        return false;
     }
 
-    /** Returns the enemy side in a battle we belong to. Return "allies", "foes", or false if this Battler is neither. Just an inversion of Battler.getSide(). */
-    getOtherSide(): 'allies' | 'foes' | false {
+    /** Returns the enemy side in a battle we belong to. Returns "allies" or "foes",. */
+    getOtherSide(): 'allies' | 'foes' {
         const mySide = this.getSide();
         if (mySide === 'allies') {
             return 'foes';
-        } else if (mySide === 'foes') {
+        } else {
             return 'allies';
         }
-        return mySide;
+    }
+
+    /** Returns an array of all possible Actions this Battler could do with a Usable, depending on its targeting properties. */
+    getUseTargets(thing: Usable, instantaneous = false): Action[] {
+        const possibilities: Action[] = [];
+        const friendlies = this.bc[this.getSide()];
+        const enemies = this.bc[this.getOtherSide()];
+
+        if (thing.targetType === 'single' && thing.defaultTarget === 'friendly') {
+            // Add an action for every friendly
+            for (let f = 0; f < friendlies.length; f++) {
+                const friendly = friendlies[f];
+                possibilities.push(new Action('use', this, friendly, thing, instantaneous));
+            }
+        } else if (thing.targetType === 'single' && thing.defaultTarget === 'enemy') {
+            // Add an action for every enemy
+            for (let f = 0; f < enemies.length; f++) {
+                const enemy = enemies[f];
+                possibilities.push(new Action('use', this, enemy, thing, instantaneous));
+            }
+        } else if (thing.targetType === 'multiple' && thing.defaultTarget === 'friendly') {
+            // Add one action for all friendlies
+            possibilities.push(new Action('use', this, friendlies, thing, instantaneous));
+        } else if (thing.targetType === 'multiple' && thing.defaultTarget === 'enemy') {
+            // Add one action or all enemies
+            possibilities.push(new Action('use', this, enemies, thing, instantaneous));
+        } else {
+            // Add one action for everyone
+            possibilities.push(new Action('use', this, null, thing, instantaneous));
+        }
+
+        return possibilities;
+    }
+
+    /** Returns an array of all possible Actions this Battler could do. Should be called at the start of every turn. */
+    getAllActions(instantaneous = false): Action[] {
+        // Here's an important distinction in our vocabulary: "allies"/"friendlies" vs. "foes"/"enemies"
+        //  "allies" is the player team, while "friendlies" refers to Battlers on the same side as this one
+        //  "foes" is the enemy, AI team, while "enemies" refers to Battlers on the opposite side as this one
+        // For example: the allies' friendlies are the allies, the allies' enemies are the foes.
+        // And the foes' friendlies are the foes, and the foes' enemies are the allies.
+
+        // In this method: should we assign a "weight" to each action to help the AI?
+
+        const possibilities: Action[] = [];
+
+        // For every enemy:
+        const enemies = this.bc[this.getOtherSide()];
+        for (let f = 0; f < enemies.length; f++) {
+            // Add a basic attack possiblity
+            const enemy = enemies[f];
+            possibilities.push( new Action('attack', this, enemy, null, instantaneous));
+
+            // Add an attack possiblity for each of our elements
+            for (let e = 0; e < this.template.elements.length; e++) {
+                const action = new Action('attack', this, enemy, null, instantaneous);
+                action.element = this.template.elements[e];
+                possibilities.push(action);
+            }
+        }
+
+        // For every move we know, add action for each move's target
+        for (let m = 0; m < this.template.moves.length; m++) {
+            const move = this.template.moves[m];
+            possibilities.push(...this.getUseTargets(move, instantaneous));
+        }
+
+        // For every item we have, add an action for each item's target
+        for (let i = 0; i < this.inventory.length; i++) {
+            const item = this.inventory[i];
+            possibilities.push(...this.getUseTargets(item, instantaneous));
+        }
+        
+        // Add a mask action for our current mask
+        if (this.currentMask !== null) {
+            possibilities.push(...this.getUseTargets(this.template.masks[this.currentMask], instantaneous));
+        }
+
+        // Add a pass action
+        possibilities.push(new Action('pass', this, null, null, instantaneous));
+
+        // New action types go here
+
+        // Filter out impossible actions and return the rest
+        return possibilities.filter((action) => {
+            return !action.isImpossible();
+        });
     }
 
     // TO-DO:
 
     determineAction(bc: BattleController, instantaneous = false): Promise<Action> {
         if (!this.bc || this.bc.battleOver) {
-            // Set controller if it hasn't been set yet
+            // Sets controller if it hasn't been set yet
             this.bc = bc;
         }
+
         return new Promise((resolve, reject) => {
 
-            // If instantaneous OR not the local player while playing locally, use AI to evaluate best action
+            // In client context:
 
-            // If the local player, open HUD and allow for action selection
+            // If local player offline, open HUD and resolve with whatever the player picks
+            // If not local player offline, use local AI
 
-            // If not the local player and playing online, wait for an online action response
+            // If local player online, open HUD but DON'T resolve with the Action - send it to the server instead. Then wait for the server confirmation response, THEN resolve with our action
+            // If not local player online, wait for server response with our action and resolve with it
+
+
+            // In server context:
+            
+            // If an NPC, use AI and send the resulting action
+            // If a player, wait for the client to propose their action. Then confirm it and wait for the rest of the actions to be ready
+
+            // Eh... My brain hurts. This is all probably gonna have to split into different methods in different places. Where? Gosh I have no clue.
 
             resolve(new Action('attack',this,this));
-
         });
-    }
-
-    getAllActions(): Action[] {
-        const possibilities: Action[] = [];
-
-        // Add an attack action for every battler on the opposite side
-
-        // Add a special action for every valid target of each move
-
-        // Add an item action for every valid target of each item
-        
-        // Add a mask action for every valid target of every mask
-
-        // Add a protect action for every valid target of a protect move
-
-        return [];
     }
 
     // Add methods to save and load a battler - like a Toa - in-between sessions? Via JSON?

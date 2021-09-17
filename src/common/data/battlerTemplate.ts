@@ -1,7 +1,7 @@
 import { Element, elements } from './elements';
 import { Accessory } from './inventory/accessories';
 import { Equipment } from './inventory/equipment';
-import { InventoryItem } from './inventory/items';
+import { InventoryItem, UsableItem } from './inventory/items';
 import { Weapon } from './inventory/weapons';
 import { Mask, masks } from './masks';
 import StatCollection from './stats';
@@ -40,7 +40,8 @@ interface BattlerTemplate {
     weapon: Weapon | null;
     equipment: Equipment | null;
     accessory: Accessory | null;
-    inventory: (Weapon | Equipment | Accessory | InventoryItem | null)[];
+    inventory: UsableItem[];
+    backpack: (Weapon | Equipment | Accessory | InventoryItem | null)[];
 
     // To add:
     //  AI decision flavors. E.g. mask use likelihood, attack likelihood, elemental likelihood, etc.
@@ -57,7 +58,7 @@ const battlerTemplates : BattlerTemplateList = {
         dropXP: 1,
         dropMoney: 1,
         elements: [ ],
-        masks: [ masks.pakari ],
+        masks: [ masks.hau ],
         moves: [],
         stats: {
             hp: 10,
@@ -81,6 +82,7 @@ const battlerTemplates : BattlerTemplateList = {
         accessory: null,
         surviveKO: false,
         inventory: [],
+        backpack: [],
     },
 
     // More templates here

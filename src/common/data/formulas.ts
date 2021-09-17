@@ -32,6 +32,18 @@ const Formulas = {
     calculateElementalAttackCost: function(attack: number, element: Element, minimum = 2, attackDivisor = 2): number {
         return Math.max( minimum, Math.round( minimum + (attack * element.applyCostMultiplier / attackDivisor) ));
     },
+
+    /** Calculates the number of normal attacks it would take to deplete an amount of HP. */
+    attacksToDefeat: function(attack: number, defense: number, hp: number, damageConstant = 10): number {
+        const damage = Formulas.calculateDamage(attack, defense, damageConstant);
+        return Math.ceil(hp / damage);
+    },
+
+    /** Calculates the number of elemental attacks it would take to deplete an amount of HP. */
+    elementalAttacksToDefeat: function(attack: number, defense: number, attackElement: Element | null, defenseElements: Element[], hp: number, damageConstant = 10): number {
+        const damage = Formulas.calculateElementalDamage(attack, defense, attackElement, defenseElements, damageConstant);
+        return Math.ceil(hp / damage);
+    },
 }
 
-export default Formulas
+export default Formulas;

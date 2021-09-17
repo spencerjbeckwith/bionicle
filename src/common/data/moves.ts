@@ -1,6 +1,6 @@
 import Battler from '../battle/battler';
 import deepfreeze from 'deepfreeze';
-import { Usable, UseFunction } from './inventory/items';
+import { Usable, UseFunction } from './usable';
 
 interface SpecialMoveList {
     flare: SpecialMove;
@@ -12,10 +12,11 @@ class SpecialMove extends Usable {
         public readonly name: string, 
         public readonly description: string, 
         public readonly cost: number, 
-        targetType: 'single' | 'multiple' | null, 
+        targetType: 'single' | 'multiple' | null,
+        defaultTarget: 'friendly' | 'enemy',
         use: UseFunction,
     ) {
-        super(targetType, use);
+        super(targetType, defaultTarget, use);
     }
 }
 
@@ -29,7 +30,7 @@ const specialMoves : SpecialMoveList = {
         'Flare',
         'Attack a foe with fire.',
         1,
-        'single',
+        'single', 'enemy',
         function(bearer: Battler, target: Battler | null, instantaneous = false) {
             return new Promise((resolve, reject) => {
 

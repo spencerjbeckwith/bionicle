@@ -3,6 +3,7 @@ import { Accessory } from '../data/inventory/accessories';
 import { Equipment } from '../data/inventory/equipment';
 import { Weapon } from '../data/inventory/weapons';
 import { Mask } from '../data/masks';
+import { SpecialMove } from '../data/moves';
 import { StatusEffect } from '../data/statuses';
 import { Action } from './actions';
 import BattleController from './battleController';
@@ -84,7 +85,7 @@ test('weapon, equipment, accessory, and mask equipping',() => {
         deinit: jest.fn(),
     }
 
-    const mockMask = new Mask('','',0,true,jest.fn(),jest.fn(),jest.fn());
+    const mockMask = new Mask('','',0,'single','enemy',jest.fn(),jest.fn(),jest.fn());
 
     // Equip and remove a weapon
     const mock = new Battler(mockTemplate);
@@ -295,15 +296,15 @@ test('BattlerBeginTurnEvent and BattlerEndTurnEvent can mutate the doTurn() acti
     expect(mockFn).toBeCalledTimes(3);
 });
 
-test('getSide() returns correctly',() => {
+test('getSide() and getOtherSide() return correctly',() => {
     const ally = new Battler(mockTemplate);
     const foe = new Battler(mockTemplate);
-    const neither = new Battler(mockTemplate);
     new BattleController([ ally ], [ foe ]);
 
     expect(ally.getSide()).toBe('allies');
     expect(foe.getSide()).toBe('foes');
-    expect(neither.getSide()).toBe(false);
+    expect(ally.getOtherSide()).toBe('foes');
+    expect(foe.getOtherSide()).toBe('allies');
 });
 
 test('dispatchMultipleEventTriads() executes all in order',async () => {
@@ -366,4 +367,73 @@ test('dispatchMultipleEventTriads() executes all in order',async () => {
     expect(array).toMatchObject([
         0, 1, 2, 3, 4, 5
     ]);
+});
+
+test('getUseTargets() returns correct number of actions',() => {
+    const ally = new Battler(mockTemplate);
+    const foe = new Battler(mockTemplate);
+    const foe2 = new Battler(mockTemplate);
+    new BattleController([ ally, new Battler(mockTemplate) ], [ foe, foe2, new Battler(mockTemplate) ]);
+
+    const fakeUse = function(bearer: Battler, target: Battler | null, instantaneous = false): Promise<void> {
+        return new Promise((resolve, reject) => {
+            resolve();
+        });
+    };
+
+    const singleFriendly = new SpecialMove('','',0,'single','friendly',fakeUse);
+    const singleEnemy = new SpecialMove('','',0,'single','enemy',fakeUse);
+    const multipleFriendly = new SpecialMove('','',0,'multiple','friendly',fakeUse);
+    const multipleEnemy = new SpecialMove('','',0,'multiple','enemy',fakeUse);
+    const noTarget = new SpecialMove('','',0,null,null,fakeUse);
+
+    // single - friendly
+    expect(ally.getUseTargets(singleFriendly).length).toBe(2);
+    expect(foe.getUseTargets(singleFriendly).length).toBe(3);
+    expect(foe2.getUseTargets(singleFriendly).length).toBe(3);
+
+    // single - enemy
+    expect(ally.getUseTargets(singleEnemy, true).length).toBe(3);
+    expect(foe.getUseTargets(singleEnemy, true).length).toBe(2);
+    expect(foe.getUseTargets(singleEnemy, true).length).toBe(2);
+
+    // multiple - friendly
+    expect(ally.getUseTargets(multipleFriendly).length).toBe(1);
+    expect(foe.getUseTargets(multipleFriendly).length).toBe(1);
+    expect(foe2.getUseTargets(multipleFriendly).length).toBe(1);
+
+    // multiple - enemy
+    expect(ally.getUseTargets(multipleEnemy).length).toBe(1);
+    expect(foe.getUseTargets(multipleEnemy).length).toBe(1);
+    expect(foe2.getUseTargets(multipleEnemy).length).toBe(1);
+
+    // no target
+    expect(ally.getUseTargets(noTarget).length).toBe(1);
+    expect(foe.getUseTargets(noTarget).length).toBe(1);
+    expect(foe2.getUseTargets(noTarget).length).toBe(1);
+
+    // You may also want to test that these arrays have the *correct* actions...
+});
+
+test('getAllActions() returns correct number of actions',() => {
+    const ally = new Battler(mockTemplate);
+    const foe = new Battler(mockTemplate);
+    const foe2 = new Battler(mockTemplate);
+    new BattleController( [ally], [foe, foe2]);
+
+    /* mockTemplate: 
+        Wnows mockMove, which has no target. (1 action)
+        Wears mockMask, which targets multiple friendlies. (1 action)
+        Is of element mockElement2, giving an extra type of attack (1 extra action per foe)
+        And has a mockItem, targets a single enemy. (1 action per enemy)
+
+        ** When you add new actions, you must account for them here!
+    */
+
+    // 2x attacks on 2 foes = 4 + 1 (mockMove) + 1 (mockMask) + 2 (mockItem) + 1 (pass) = 9 possiblities for the ally
+    expect(ally.getAllActions(true).length).toBe(9);
+
+    // 2x attack on 1 foe = 2 + 1 (mockMove) + 1 (mockMask) + 1 (mockItem) + 1 (pass) = 6 possiblities for each foe
+    expect(foe.getAllActions(true).length).toBe(6);
+    expect(foe2.getAllActions(true).length).toBe(6);
 });
