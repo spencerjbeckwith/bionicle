@@ -2,11 +2,12 @@ import { Action } from '../battle/actions';
 import BattleController from '../battle/battleController';
 import Battler from '../battle/battler';
 import { PromisedEvent } from '../promisedEventTarget';
+import { UsableItem } from './inventory/items';
 import { StatusEffect } from './statuses';
 
 type BattleControllerEventTypes = 'start' | 'end' | 'beginRound' | 'endRound';
 
-type BattlerEventTypes = 'start' | 'end' | 'beginTurn' | 'endTurn' | 'beginRound' | 'endRound' 
+type BattlerEventTypes = 'start' | 'end' | 'beginTurn' | 'endTurn' | 'beginRound' | 'endRound' | 'flee' | 'given' 
     | 'damage' | 'heal' | 'knockOut' | 'revive' | 'statusApplied' | 'statusRemoved' | 'beforeAffected' | 'afterAffected';
 
 // BATTLER EVENTS
@@ -42,6 +43,20 @@ class BattlerBeginRoundEvent extends BattlerEvent {
 class BattlerEndRoundEvent extends BattlerEvent {
     constructor(battler: Battler, instantaneous = false) {
         super('endRound', battler, instantaneous);
+    }
+}
+
+/** Fires immediately before this Battler takes a flee action. */
+class BattlerFleeEvent extends BattlerEvent {
+    constructor(battler: Battler, public success: boolean, instantaneous = false) {
+        super('flee', battler, instantaneous);
+    }
+}
+
+/** Fires immediately before this Battler is given an item. */
+class BattlerGivenEvent extends BattlerEvent {
+    constructor(battler: Battler, public item: UsableItem, public giver: Battler, instantaneous = false) {
+        super('given', battler, instantaneous);
     }
 }
 
@@ -121,6 +136,9 @@ export {
     BattlerEndTurnEvent,
     BattlerBeginRoundEvent,
     BattlerEndRoundEvent,
+    BattlerFleeEvent,
+    BattlerGivenEvent,
+
     BattlerDamageEvent,
     BattlerHealEvent,
     BattlerKnockOutEvent,

@@ -15,9 +15,11 @@ const mockTemplate: BattlerTemplate = {
     description: '',
     dropMoney: 0,
     dropXP: 0,
+    fleeChance: 50,
     elements: [ mockElement2 ],
     immunities: [],
     inventory: [ mockItem ],
+    inventorySize: 10,
     backpack: [],
     moves: [
         mockMove,

@@ -1,4 +1,4 @@
-import Matrix from '../common/matrix';
+import Matrix from '../../common/matrix';
 
 interface TextureInfo {
     texture: WebGLTexture;

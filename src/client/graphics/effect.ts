@@ -1,4 +1,4 @@
-import { Sprite } from '../common/sprite';
+import { Sprite } from '../../common/sprite';
 
 class Effect {
     visible: boolean;

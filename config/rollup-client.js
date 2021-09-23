@@ -1,3 +1,4 @@
+import commonjs from '@rollup/plugin-commonjs';
 import typescript from '@rollup/plugin-typescript';
 import { terser } from 'rollup-plugin-terser';
 export default {
@@ -6,6 +7,7 @@ export default {
         file: 'build/bionicle.min.js',
     },
     plugins: [
+        commonjs(),
         typescript({
             tsconfig: './config/tsconfig-client.json',
         }),

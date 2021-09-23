@@ -1,7 +1,11 @@
 import Matrix from '../common/matrix';
-import { TextureInfo, GameTextureInfo, gl, canvas, projection, loadTexture, createGameTexture, enableCanvasResize } from './gl';
-import shader from './shader';
+import { TextureInfo, GameTextureInfo, gl, canvas, projection, loadTexture, createGameTexture, enableCanvasResize } from './graphics/gl';
+import shader from './graphics/shader';
+import { drawSprite } from './graphics/draw';
 import { Sprite, SpriteImage, spr }  from '../common/sprite';
+import BattleController from '../common/battle/battleController';
+import Battler from '../common/battle/battler';
+import { battlerTemplates } from '../common/data/battlerTemplate';
 
 let pal = 1;
 function main() {
@@ -55,6 +59,9 @@ function main() {
 
     drawSprite(spr.fikou,0,200,200,9);
     
+    // DO STUFF!
+    bc.main();
+
     // Prepare to draw to the canvas
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);
     gl.activeTexture(gl.TEXTURE0);
@@ -116,54 +123,6 @@ Promise.all([
     main();
 }).catch(console.error);
 
-function drawSprite(sprite: Sprite, image: number, x: number, y: number, palette = 0, transform?: (mat: Matrix) => Matrix, r?: number, g?: number, b?: number, a?: number) {
-    image = Math.floor(image);
-    if (!sprite.images[image]) {
-        image %= sprite.images.length;
-    }
-    let mat = projection.copy().translate(x,y).scale(sprite.width,sprite.height);
-    if (transform) {
-        mat = transform(mat);
-    }
-    mat = mat.translate(-sprite.originX/sprite.width,-sprite.originY/sprite.height);
-
-    gl.bindVertexArray(shader.vao);
-    gl.uniformMatrix3fv(shader.uniforms.positionMatrix,false,mat.values);
-    gl.uniformMatrix3fv(shader.uniforms.textureMatrix,false,sprite.images[image].t);
-
-    gl.uniform1i(shader.uniforms.paletteIndex,palette);
-    gl.uniform4f(shader.uniforms.blend, r || 1, g || 1, b || 1, a || 1);
-    gl.drawArrays(gl.TRIANGLES,0,6);
-    gl.bindVertexArray(null);
-}
-
-function drawSpriteSpecial(sprite: Sprite, image: number, x: number, y: number, positions: number[], UVs: number[], triangleCount: number, palette = 0, transform?: (mat: Matrix) => Matrix, r?: number, g?: number, b?: number, a?: number) {
-    image = Math.floor(image);
-    if (!sprite.images[image]) {
-        image %= sprite.images.length;
-    }
-    let mat = projection.copy().translate(x,y).scale(sprite.width,sprite.height);
-    if (transform) {
-        mat = transform(mat);
-    }
-    mat = mat.translate(-sprite.originX/sprite.width,-sprite.originY/sprite.height);
-
-    shader.setPositions(positions);
-    shader.setUVs(UVs);
-
-    gl.uniformMatrix3fv(shader.uniforms.positionMatrix,false,mat.values);
-    gl.uniformMatrix3fv(shader.uniforms.textureMatrix,false,sprite.images[image].t);
-
-    gl.uniform1i(shader.uniforms.paletteIndex,palette);
-    gl.uniform4f(shader.uniforms.blend, r || 1, g || 1, b || 1, a || 1);
-    gl.drawArrays(gl.TRIANGLES,0,triangleCount*3);
-}
-
-// TODO:
-// drawSpriteSpeed
-// drawSpriteSpecialSpeed
-// drawRectangle
-// drawLine
-// drawCircle
-// drawPrimitive
-// drawTexture
+const ally = new Battler(battlerTemplates.fikou);
+const foe = new Battler(battlerTemplates.fikou);
+const bc = new BattleController([ally],[foe]);

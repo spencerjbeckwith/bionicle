@@ -18,13 +18,15 @@ class BattleController extends PromisedEventTarget {
 
     currentTimeline: Timeline | null;
 
-    constructor(public allies: Battler[], public foes: Battler[], public instantaneous = false) {
+    constructor(public allies: Battler[], public foes: Battler[], public instantaneous = false, public canFlee = true) {
         super();
         for (let i = 0; i < this.allies.length; i++) {
             this.allies[i].bc = this;
+            this.allies[i].fled = false;
         }
         for (let i = 0; i < this.foes.length; i++) {
             this.foes[i].bc = this;
+            this.foes[i].fled = false;
         }
 
         // Initial state
@@ -86,8 +88,8 @@ class BattleController extends PromisedEventTarget {
         return turnOrder;
     }
 
-    /** Returns "allies" if the allies have won the battle, "foes" if the foes have won, or false if neither side has won. One side wins when the opposite side is either an empty array or all KOed. If everybody dies, foes win. */
-    checkWinCondition(): 'allies' | 'foes' | false {
+    /** Returns "allies" if the allies have won the battle, "foes" if the foes have won, "fled" if the players escaped, or false if neither side has won. One side wins when the opposite side is either an empty array or all KOed. If everybody dies, foes win. */
+    checkWinCondition(): 'allies' | 'foes' | 'fled' | false {
         if (this.allies.length === 0) {
             // All allies are destroyed
             return 'foes';
@@ -96,6 +98,12 @@ class BattleController extends PromisedEventTarget {
             for (let a = 0; a < this.allies.length; a++) {
                 if (this.allies[a].isKOed) {
                     allyKills++;
+                }
+
+                if (this.allies[a].fled) {
+                    // An ally escaped! End the whole battle
+                    //  Change this behavior later?
+                    return 'fled';
                 }
             }
 
@@ -127,8 +135,8 @@ class BattleController extends PromisedEventTarget {
     }
 
     /** Executes the provided actions in order */
-    doActions(actions: Action[], instantaneous = false): Promise<'allies' | 'foes' | false> {
-        return new Promise<'allies' | 'foes' | false>((resolve, reject) => {
+    doActions(actions: Action[], instantaneous = false): Promise<'allies' | 'foes' | 'fled' | false> {
+        return new Promise<'allies' | 'foes' | 'fled' | false>((resolve, reject) => {
             if (actions.length > 1) {
                 // Do all the turns
                 let promise = actions[0].executor.doTurn(actions[0], instantaneous);
@@ -222,7 +230,7 @@ class BattleController extends PromisedEventTarget {
         }); // PROMISE HELL AYYO
     }
 
-    end(victors: 'allies' | 'foes') {
+    end(victors: 'allies' | 'foes' | 'fled') {
         // ...
     }
 

@@ -7,6 +7,7 @@ import mockMove from './mocks/mockMove';
 import { mockElement1 } from './mocks/mockElements';
 import mockItem from './mocks/mockItem';
 import mockMask from './mocks/mockMask';
+import BattleController from './battleController';
 // If you're testing with mockMove, mockItem, and mockMask, be sure your fake actions match their targetingType
 
 test('attack actions deal damage and trigger damage/affected/KO events',async () => {
@@ -226,4 +227,38 @@ test('Action.applyRequirements takes consumed items out of inventory on use',() 
     const startLength = battler.inventory.length;
     (new Action('use',battler,battler,mockItem,true)).applyRequirements();
     expect(battler.inventory.length).toBe(startLength - 1);
+});
+
+test('flee actions set the Battlers fled when successful',async () => {
+    const ally = new Battler(mockTemplate);
+    const foe = new Battler(mockTemplate);
+    const bc = new BattleController([ ally ],[ foe ],true,true);
+
+    // Mock template has 50% chance to flee, so manipulate the random
+    const flee = new Action('flee',ally,null);
+
+    flee.randoms[0] = 0.9;
+    await flee.execute();
+    expect(ally.fled).toBe(false);
+
+    flee.randoms[0] = 0.2;
+    await flee.execute();
+    expect(ally.fled).toBe(true);
+});
+
+test('give actions move items',async () => {
+    const a1 = new Battler(mockTemplate); // mmm... A1 steak sauce...
+    const a2 = new Battler(mockTemplate);
+
+    const give = new Action('give',a1,a2,mockItem);
+
+    // Before
+    expect(a1.inventory.length).toBe(1);
+    expect(a2.inventory.length).toBe(1);
+
+    await give.execute();
+
+    // After
+    expect(a1.inventory.length).toBe(0);
+    expect(a2.inventory.length).toBe(2);
 });

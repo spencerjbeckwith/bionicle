@@ -26,6 +26,7 @@ interface BattlerTemplate {
 
     dropXP: number;
     dropMoney: number;
+    fleeChance: number;
 
     elements: Element[];
     masks: Mask[];
@@ -43,6 +44,8 @@ interface BattlerTemplate {
     inventory: UsableItem[];
     backpack: (Weapon | Equipment | Accessory | InventoryItem | null)[];
 
+    inventorySize: number;
+
     // To add:
     //  AI decision flavors. E.g. mask use likelihood, attack likelihood, elemental likelihood, etc.
     //  Difficulty parameters for foe selection
@@ -57,6 +60,7 @@ const battlerTemplates : BattlerTemplateList = {
         palette: 7,
         dropXP: 1,
         dropMoney: 1,
+        fleeChance: 0,
         elements: [ ],
         masks: [ masks.hau ],
         moves: [],
@@ -82,6 +86,7 @@ const battlerTemplates : BattlerTemplateList = {
         accessory: null,
         surviveKO: false,
         inventory: [],
+        inventorySize: 0,
         backpack: [],
     },
 

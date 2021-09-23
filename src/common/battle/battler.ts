@@ -36,6 +36,8 @@ class Battler extends PromisedEventTarget {
     /** Indicates if this battler is a Toa, which are typically controlled by other players */
     isToa: boolean;
 
+    fled: boolean;
+
     // These determine the options presented to a player or an AI each turn, along with the template's moves.
     /** What this Battler is using to attack */
     weapon: Weapon | null;
@@ -69,6 +71,7 @@ class Battler extends PromisedEventTarget {
         this.isKOed = false;
         this.puppet = false;
         this.server = false;
+        this.fled = false;
 
         // Equip our template's equipment
         this.weapon = null;
@@ -518,7 +521,7 @@ class Battler extends PromisedEventTarget {
 
     /** Returns what side in a battle we belong to. Returns "allies" or "foes". */
     getSide(): 'allies' | 'foes' {
-        if (this.bc.allies.includes(this)) {
+        if (this.bc?.allies.includes(this)) {
             return 'allies';
         } else {
             return 'foes';
@@ -538,6 +541,8 @@ class Battler extends PromisedEventTarget {
     /** Returns an array of all possible Actions this Battler could do with a Usable, depending on its targeting properties. */
     getUseTargets(thing: Usable, instantaneous = false): Action[] {
         const possibilities: Action[] = [];
+        if (!this.bc) { return []; } // No BattleController set? Then no targets
+
         const friendlies = this.bc[this.getSide()];
         const enemies = this.bc[this.getOtherSide()];
 
@@ -578,6 +583,7 @@ class Battler extends PromisedEventTarget {
         // In this method: should we assign a "weight" to each action to help the AI?
 
         const possibilities: Action[] = [];
+        if (!this.bc) { return []; } // No BattleController? Then no actions
 
         // For every enemy:
         const enemies = this.bc[this.getOtherSide()];
@@ -597,13 +603,17 @@ class Battler extends PromisedEventTarget {
         // For every move we know, add action for each move's target
         for (let m = 0; m < this.template.moves.length; m++) {
             const move = this.template.moves[m];
-            possibilities.push(...this.getUseTargets(move, instantaneous));
+            if (move) {
+                possibilities.push(...this.getUseTargets(move, instantaneous));
+            }
         }
 
         // For every item we have, add an action for each item's target
         for (let i = 0; i < this.inventory.length; i++) {
             const item = this.inventory[i];
-            possibilities.push(...this.getUseTargets(item, instantaneous));
+            if (item) {
+                possibilities.push(...this.getUseTargets(item, instantaneous));
+            }
         }
         
         // Add a mask action for our current mask

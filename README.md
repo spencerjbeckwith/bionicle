@@ -195,6 +195,11 @@ So to start a battle, ```startRound()``` is all that needs to be called and it w
 *Any rejection anywhere in the chain may break the entire battle, so be careful and be sure to use ```.finally()``` and make sure you always catch and handle rejections appropriately!*
 
 # To-do
+- Begin implementing client battles
+    - Timelines and animations - making actions non-instantaneous
+    - Design battle HUD
+    - Make sprite fonts for GL
+
 - Implement (as far as you can) Battler.determineAction
     - What exactly does a network 'puppet' mean? When is the BattleController a puppet and when are Battlers puppets?
         - BattleController is a puppet in the client while playing online. It is not a puppet when playing locally offline, or when ran in the server context
@@ -227,21 +232,11 @@ So to start a battle, ```startRound()``` is all that needs to be called and it w
 - Yikes, this is complex. I'm starting to think the amount of functionality that can be truly re-used between server and client is a bit more limited than I thought.
 - spend some time thinking about this. Boy
 
-- New actions to implement and test:
-    - Flee - must integrate into BattleController.checkWinCondition and startRound
-        - Every battle must have a "canFlee" flag - so you can't run from bosses or other players
-        - Battle ends when all foes have fled or one ally has fled.
-    - Give
-        - Should Battlers have an inventory limit? Probably. Where and how will it be enforced? I guess that depends on where the items come from.
-    - Switch Mask
-
 - Standardize errors thrown by rejected promises
     - Should rejections signify an application error, or natural game problems? When would they change and how do you account for this?
     - This will be tough to do, so maybe try approaching it from the top-down level once BattleController.startRound is mostly solid
     - But because rejections stop an entire promise chain... nothing should "naturally" reject. So forget that. All rejections should be counted as application errors.
-- Begin working on client and adding animations to Actions/turns - making them non-instantaneous
-- Design battle HUD
-- Make sprite fonts for GL
+
 - Everything lmao
 
 # Questions to Answer
@@ -256,3 +251,10 @@ So to start a battle, ```startRound()``` is all that needs to be called and it w
     - These actions must then be re-distributed to all clients, including the one that made it, so the randomness is uniform on all clients
         - Then, different status/move/mask/etc. implementations can use an action's randomness freely
 - Where will the differences lie in BattleController and Battler, when they are puppets or not?
+
+# Other Notes
+- The testing for this game is, well... quite lacking. Yes, I test big concepts, but not every case. Many tests do multiple things at once, too, though hopefully if they fail they'd be trivial to figure out.
+    - The problem comes from so many use cases and so many nested promises. For example, not every possible rejection is tested, as it probably should be.
+    - It's kinda hard to write all these tests by myself, so I'm just sticking to the real big picture for now.
+- Battler and Action classes form a circular dependency and I don't believe it can be fixed without a *lot* of coaxing and finagling. TypeScript needs to load the types of Battler and Action, and even though their constructors aren't present in the compiled JavaScript, rollup still throws an error because of the module loading. Neither can depend solely on the other, as both *must* use each other's types in the type annotations.
+    - Maybe there is a way to fix this, but its beyond me for now. You'll just have to cope with a circular dependency warning.

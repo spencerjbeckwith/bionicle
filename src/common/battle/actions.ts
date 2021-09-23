@@ -1,5 +1,5 @@
 import { Element } from '../data/elements';
-import { BattlerAfterAffectedEvent, BattlerBeforeAffectedEvent } from '../data/events';
+import { BattlerAfterAffectedEvent, BattlerBeforeAffectedEvent, BattlerFleeEvent, BattlerGivenEvent } from '../data/events';
 import Formulas from '../data/formulas';
 import { Usable } from '../data/usable';
 import { UsableItem } from '../data/inventory/items';
@@ -7,7 +7,7 @@ import Battler from './battler';
 import { SpecialMove } from '../data/moves';
 import { Mask } from '../data/masks';
 
-type ActionType = 'attack' | 'use' | 'pass'; // New action types here
+type ActionType = 'attack' | 'use' | 'pass' | 'flee' | 'give'; // New action types here
 
 /** Represents what a Battler is going to do on any turn. */
 class Action {
@@ -72,7 +72,7 @@ class Action {
                         new BattlerBeforeAffectedEvent(this.target, this, this.instantaneous),
                         new BattlerAfterAffectedEvent(this.target, this, this.instantaneous),
                         (event) => {
-                            if (!(this.target instanceof Battler)) {
+                            if (this.target instanceof Array || !this.target) {
                                 return new Promise((resolve, reject) => { reject(`Action type attack target is not a singular Battler!`); });
                             }
 
@@ -97,26 +97,7 @@ class Action {
                     // What we do depends on the type of target
                     // isImpossible already confirmed it matches our move's target type and we are using something properly
                     this.thingUsed = this.thingUsed as Usable;
-                    if (this.target instanceof Battler) {
-                        // Single target: dispatch a regular triad
-                        this.target.dispatchEventTriad(
-                            new BattlerBeforeAffectedEvent(this.target, this, this.instantaneous),
-                            new BattlerAfterAffectedEvent(this.target, this, this.instantaneous),
-                            (event) => {
-                                // Do the effect of the move and return its promise - be sure to pass in our instantaneous-ness
-                                if (this.thingUsed) {
-                                    return this.thingUsed.use(this.executor, this.target as Battler, this.instantaneous);
-                                } else {
-                                    return new Promise<void>((resolve, reject) => resolve);
-                                }
-                            }
-                        ).then(() => {
-                            resolve(); // Done!
-                        }).catch((err) => {
-                            // Problem on move use on single target
-                            reject(err);
-                        });
-                    } else if (this.target instanceof Array) {
+                    if (this.target instanceof Array) {
                         // Multiple targets - dispatch multiple triads
                         if (this.target.length === 0) {
                             reject('Use actions, provided an array of targets, must have at least one!');
@@ -148,6 +129,25 @@ class Action {
                             // Problem dispatching specialmove triad multiples
                             reject(err);
                         });
+                    } else if (this.target) {
+                        // Single target: dispatch a regular triad
+                        this.target.dispatchEventTriad(
+                            new BattlerBeforeAffectedEvent(this.target, this, this.instantaneous),
+                            new BattlerAfterAffectedEvent(this.target, this, this.instantaneous),
+                            (event) => {
+                                // Do the effect of the move and return its promise - be sure to pass in our instantaneous-ness
+                                if (this.thingUsed) {
+                                    return this.thingUsed.use(this.executor, this.target as Battler, this.instantaneous);
+                                } else {
+                                    return new Promise<void>((resolve, reject) => resolve);
+                                }
+                            }
+                        ).then(() => {
+                            resolve(); // Done!
+                        }).catch((err) => {
+                            // Problem on move use on single target
+                            reject(err);
+                        });
                     } else {
                         // Uses that don't require a target: just call use right away, no need to fire any targets' events
                         this.thingUsed.use(this.executor, null, this.instantaneous).then(() => {
@@ -162,6 +162,43 @@ class Action {
 
                 case ('pass'): {
                     resolve();
+                    break;
+                }
+
+                case ('flee'): {
+                    const success = ((this.randoms[0]*100 < this.executor.template.fleeChance));
+                    // Expose success onto our event
+                    this.executor.dispatchPromisedEvent(new BattlerFleeEvent(this.executor, success, this.instantaneous)).then((ev) => {
+                        if (ev.success) {
+                            // Flee success!
+                            //  Here: end the battle if we are an ally?
+                            this.executor.fled = true;
+                            resolve();
+                        } else {
+                            // Fleeing failed
+                            resolve();
+                        }
+                    }).catch((err) => {
+                        reject(err);
+                    });
+
+                    break;
+                }
+
+                case ('give'): {
+                    this.target = this.target as Battler;
+                    this.target.dispatchPromisedEvent(new BattlerGivenEvent(this.target, this.thingUsed as UsableItem, this.executor, this.instantaneous)).then((ev) => {
+                        // Splice item out of the giver's inventory
+                        ev.giver.inventory.splice(ev.giver.inventory.indexOf(ev.item),1);
+
+                        // And push into the new inventory
+                        ev.battler.inventory.push(ev.item);
+
+                        resolve();
+                    }).catch((err) => {
+                        reject(err);
+                    });
+
                     break;
                 }
 
@@ -184,7 +221,7 @@ class Action {
                 if (this.executor.isKOed) { return `${this.executor.template.name} cannot attack while KOed!`; }
 
                 // Break if target is not a singular Battler
-                if (!this.target || !(this.target instanceof Battler)) { return `${this.executor.template.name} cannot attack multiple targets!`; }
+                if (!this.target || this.target instanceof Array) { return `${this.executor.template.name} cannot attack multiple targets!`; }
 
                 // If we have an element, break if we can't afford the cost
                 if (this.element) {
@@ -201,7 +238,7 @@ class Action {
                 if (!this.thingUsed || !(this.thingUsed instanceof Usable)) { return `${this.executor.template.name} cannot use that!`; }
 
                 // Break if we are single target type and target is not a single battler
-                if (this.thingUsed.targetType === 'single' && !(this.target instanceof Battler)) { return `${this.executor.template.name} targeted wrong!`; }
+                if (this.thingUsed.targetType === 'single' && (this.target instanceof Array || !this.target)) { return `${this.executor.template.name} targeted wrong!`; }
 
                 // Break if we are multiple target type and target is not an array
                 if (this.thingUsed.targetType === 'multiple' && !(this.target instanceof Array)) { return `${this.executor.template.name} targeted wrong!`; }
@@ -216,8 +253,8 @@ class Action {
                     // Break if we don't have the item in our inventory
                     if (!this.executor.inventory.includes(this.thingUsed)) { return `${this.executor.template.name} can't use ${this.thingUsed.name}!`; }
                 } else if (this.thingUsed instanceof Mask) {
-                    // Break if we either don't have the mask or don't have it equipped
-                    if (!this.executor.template.masks.includes(this.thingUsed) || this.executor.currentMask !== this.executor.template.masks.indexOf(this.thingUsed)) { return `${this.executor.template.name} can't use ${this.thingUsed.name}!`; }
+                    // Break if we don't have the mask
+                    if (!this.executor.template.masks.includes(this.thingUsed)) { return `${this.executor.template.name} doesn't have ${this.thingUsed.name}!`; }
                 }
 
                 // Move is possible!
@@ -226,6 +263,30 @@ class Action {
 
             case ('pass'): { 
                 return false; // Always possible
+            }
+
+            case ('flee'): {
+                // Blocked by the battle
+                if (!this.executor.bc?.canFlee) { return 'Cannot flee!'; }
+
+                // Make a status that could block fleeing? It'd go here
+                return false;
+            }
+
+            case ('give'): {
+                // Must be a singular target
+                if (this.target instanceof Array || !this.target) { return 'Invalid target!'; }
+
+                // Item must be a UsableItem
+                if (!(this.thingUsed instanceof UsableItem)) { return 'Can only give usable items.'; }
+
+                // Giver must have the item
+                if (!this.executor.inventory.includes(this.thingUsed)) { return `Cannot give an item you don't have!`; }
+
+                // Target must have an open spot in inventory
+                if (this.target.inventory.length >= this.target.template.inventorySize) { return `Target's inventory is full!`; }
+
+                return false;
             }
 
             // More action types go here
@@ -260,12 +321,18 @@ class Action {
                             this.executor.inventory.splice(this.executor.inventory.indexOf(this.thingUsed), 1);
                         }
                     } else if (this.thingUsed instanceof Mask) {
-                        // Mask cooldown or something?
+                        // If mask isn't currently equipped, switch to it
+                        const index = this.executor.template.masks.indexOf(this.thingUsed)
+                        if (this.executor.currentMask !== index) {
+                            this.executor.equipMask(index);
+                        }
                     }
                     break;
                 }
 
                 case ('pass'): { break; }
+                case ('flee'): { break; }
+                case ('give'): { break; }
 
                 // More action types go here
 
